@@ -1,0 +1,42 @@
+# Site settings
+title:                    Arszilla's Blog
+description:              "A mathematics undergraduate's adventures in cybersecurity."
+url:                      'http://arszilla.com/'
+baseurl:                  ''
+# google_analytics:       'UA-XXXXXX-X'
+# disqus_shortname:       'your-disqus-name'
+
+author:
+  name:                   'Arszilla'
+  email:                  arszilla@outlook.com
+  twitter_username:       arszilla
+  github_username:        arszilla
+  linkedin_username:      arslanmasood
+
+defaults:
+  -
+    scope:
+      path:               ''
+      type:               'posts'
+    values:
+        layout:           'post'
+
+# Build settings
+destination:              _site
+paginate:                 10
+permalink:                /:title/
+markdown:                 kramdown
+highlighter:              rouge
+
+sass:
+    sass_dir:             _sass
+    style:                compressed
+
+kramdown:
+  # use Github Flavored Markdown
+  input:                  GFM
+  # do not replace newlines by <br>s
+  hard_wrap:              false
+
+plugins:                  ['jekyll-paginate']
+exclude:                  ['README.md', 'Gemfile', 'Gemfile.lock',]
