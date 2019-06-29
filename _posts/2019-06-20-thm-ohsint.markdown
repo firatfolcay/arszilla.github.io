@@ -35,7 +35,7 @@ Let's take a look at our image first.
 
 ![Windows XP][Windows XP]
 
-Besides some purple grass on the left, there is nothing significant in terms of information here. Let's examine its 
+Besides some purple grass on the left, there's nothing significant in terms of information here. Let's examine its 
 metadata with `exiftool`.
 
 ```
@@ -82,13 +82,13 @@ If we take a look at the Wordpress blog we'll see a single post.
 
 ![Wordpress][Wordpress 2]
 
-We now know that he is in New York right now. Additionally, if you are acquainted with Wordpress, you'd know that the 
+We now know that he's in New York right now. Additionally, if you are acquainted with Wordpress, you'd know that the 
 post info (poster, category, date etc.) comes right after the text, but in this instance that there is a gap. If we 
 highlight the text we'll see a 'hidden' text, reading `pennYDr0pper.!`; which is our password.
 
 ![Wordpress][Wordpress 3]
 
-If you are not acquainted with Wordpress you can also check the source code of the page. Specifically the area of the 
+If you're not acquainted with Wordpress you can also check the source code of the page. Specifically the area of the 
 code where the post begins:
 
 ```html
@@ -114,7 +114,7 @@ The first tweet mentions a `BSSID` of `B4:5D:50:AA:86:41`.
 
 #### Wigle
 If we take the `BSSID` and enter it into [Wigle][Wigle], we'll see where this router is alongside its `SSID`. In this 
-case its in London and its `SSID` is `UnileverWiFi`.
+case it's in London and its `SSID` is `UnileverWiFi`.
 
 ![Wigle 1][Wigle 1]
 
