@@ -18,14 +18,14 @@ default Windows XP wallpaper.
 - Find the `SSID` of the WAP he is connected to
 - Find his email address
  
-## Quick Summary
+## Summary
 - Use `exiftool` to extract the metadata from the given picture
 - Google the name from `exiftool` to find the accounts associated with it
-- Run the given `BSSID` in [Wigle][Wigle]
+- Run the found `BSSID` in [Wigle][Wigle]
 - Enumerate the given username for possible alternative accounts
  
 ## Tools Used
-- exiftool
+- `exiftool`
 - Google
 - [Wigle][Wigle]
 
@@ -39,7 +39,7 @@ Besides some purple grass on the left, there is nothing significant in terms of 
 metadata with `exiftool`.
 
 ```
-exiftool WindowsXP.jpg
+$ exiftool WindowsXP.jpg
 
 ExifTool Version Number         : 11.16
 File Name                       : WindowsXP.jpg
