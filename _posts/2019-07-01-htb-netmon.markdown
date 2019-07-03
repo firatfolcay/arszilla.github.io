@@ -2,7 +2,7 @@
 title: "HackTheBox: Netmon - Writeup"
 date: 2019-07-01 00:00:00 +0300
 categories: [cybersec, infosec, hackthebox]
-tags: [authenticated rce. ftp, network monitor, PRTG, rce]
+tags: [authenticated rce, ftp, network monitor, PRTG, rce]
 ---
 
 ## Information
