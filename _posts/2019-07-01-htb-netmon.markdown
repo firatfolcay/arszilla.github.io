@@ -62,7 +62,7 @@ Service Info: OSs: Windows, Windows Server 2008 R2 - 2012; CPE: cpe:/o:microsoft
 [...]
 ```
 
-The scan tells us that there is `HTTP` on Port 80and `FTP` on Port 21 which we can login to it anonymously.
+The scan tells us that there is `HTTP` on Port 80 and `FTP` on Port 21 which we can login to it anonymously.
 
 ### User Flag
 Let's take a look at the `FTP` by logging in anonymously.
@@ -103,8 +103,8 @@ Taking a look at the `HTTP` service, we are greeted with a login page for PRTG N
 
 ![PRTG Mainscreen][PRTG Mainscreen]
 
-I tried using `prtgadmin`/`prtgadmin` to login but it didn't work. As a result, I started snooping around the FTP, 
-hoping to find some files regarding the login credentials, which I did; on 
+Trying to login in using `prtgadmin`/`prtgadmin` was no use. As a result, snooping around the FTP in hopes of finding 
+some files regarding the login credentials was fruitful as there were 3 configuration files in 
 `C:\ProgramData\Paessler\"PRTG Network Monitor"`.
 
 ```
@@ -180,8 +180,8 @@ The data on it was readable, most notably `<dbpassword>` segment which had a use
 </dbpassword>
 ```
 
-I tried to use this but it didn't work. So I changed `PrTg@dmin2018`'s 8 to a 9 since it was a year old password and 
-tried it again with `prtgadmin`, managing to login this time and accessing the PRTG Network Manager panel.
+Trying to login using this password didn't work. Since it is a year old backup, changing `PrTg@dmin2018`'s 8 to a 9 
+trying again worked, granting us access to the PRTG Network Manager panel.
 
 ![PRTG Panel][PRTG Panel]
 
