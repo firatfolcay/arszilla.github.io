@@ -1,6 +1,6 @@
 ---
 title: "TryHackMe: Crack The Hash - Writeup"
-date: 2019-06-29 00:00:00 +0300
+date: 2019-06-29 00:00:00
 categories: [cybersec, infosec, tryhackme]
 tags: [brute-force, hash cracking]
 ---

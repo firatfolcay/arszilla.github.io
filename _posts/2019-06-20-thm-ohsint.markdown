@@ -1,6 +1,6 @@
 ---
 title: "TryHackMe: OhSINT - Writeup"
-date: 2019-06-20 00:00:00 +0300
+date: 2019-06-20 00:00:00
 categories: [cybersec, infosec, osint, tryhackme]
 tags: [intelligence gathering, osint, open source intelligence]
 ---

