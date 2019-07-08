@@ -1,5 +1,6 @@
 ---
 title: "TryHackMe: Crack The Hash - Writeup"
+excerpt: Writeup for CrackTheHash from TryHackMe
 date: 2019-06-29 00:00:00
 categories: [cybersec, infosec, tryhackme]
 tags: [brute-force, hash cracking]

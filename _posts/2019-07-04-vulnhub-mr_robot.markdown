@@ -1,5 +1,6 @@
 ---
 title: "VulnHub: Mr. Robot - Writeup"
+excerpt: Writeup for Mr. Robot from VulnHub
 date: 2019-07-04 00:00:00
 categories: [cybersec, infosec, vulnhub]
 tags: [mr. robot, php, privilege escalation, reverse shell, wordpress]
