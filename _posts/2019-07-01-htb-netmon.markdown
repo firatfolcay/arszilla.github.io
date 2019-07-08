@@ -33,7 +33,7 @@ box.
 First, we begin with a standard `nmap` scan.
 
 ```
-$ nmap -sC -sV -oN nmap.txt 10.10.10.152
+$ nmap -sC -sV 10.10.10.152
 
 [...]
 
