@@ -37,7 +37,7 @@ vulnerabilities in the system.
 We first begin with a pretty basic and standard `nmap` scan to see the services and what we're dealing with.
 
 ```
-$ nmap -sC -sV -oN nmap.txt 192.168.2.243
+$ nmap -sC -sV 192.168.2.243
 
 [...]
 
@@ -70,7 +70,7 @@ must scan for hidden directories with `gobuster`. Do note that `directory-list-2
 `/usr/share/wordlists/dirbuster/`.
 
 ```
-$ gobuster -u 192.168.2.243 -w directory-list-2.3-medium.txt
+$ gobuster dir -u 192.168.2.243 -w directory-list-2.3-medium.txt
   
 =====================================================
 Gobuster v2.0.1              OJ Reeves (@TheColonial)
