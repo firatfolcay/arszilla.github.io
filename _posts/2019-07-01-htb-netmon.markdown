@@ -1,5 +1,5 @@
 ---
-title: "HackTheBox: Netmon - Writeup"
+title: "HackTheBox | Netmon - Writeup"
 excerpt: Writeup for Netmon from HackTheBox
 date: 2019-07-01 00:00:00
 categories: [cybersec, infosec, hackthebox]

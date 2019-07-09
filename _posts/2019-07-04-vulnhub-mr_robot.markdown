@@ -1,5 +1,5 @@
 ---
-title: "VulnHub: Mr. Robot - Writeup"
+title: "VulnHub | Mr. Robot - Writeup"
 excerpt: Writeup for Mr. Robot from VulnHub
 date: 2019-07-04 00:00:00
 categories: [cybersec, infosec, vulnhub]
