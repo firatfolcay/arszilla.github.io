@@ -27,7 +27,7 @@ vulnerabilities in the system.
 - `nmap`
 - `gobuster`
 - `wpscan`
-- `php-reverse-shell` by [pentestmonkey][pentestmonkey]
+- `php-reverse-shell`
 - `nc`
 - `hashcat`
 - `python`
@@ -412,12 +412,12 @@ cat key-3-of-3.txt
 
 Thus we've captured our third and final key.
 
-[pentestmonkey]: http://pentestmonkey.net/
-[Mr. Robot]: /images/posts/2019-07-04-vulnhub-mr_robot/Mr.%20Robot.png
-[robots.txt]: /images/posts/2019-07-04-vulnhub-mr_robot/Robots.png
-[Wordpress - Panel]: /images/posts/2019-07-04-vulnhub-mr_robot/Wordpress%20-%20Panel.png
-[Wordpress - Users]: /images/posts/2019-07-04-vulnhub-mr_robot/Wordpress%20-%20Users.png
-[PHP Reverse Shell]: http://pentestmonkey.net/tools/web-shells/php-reverse-shell
-[Wordpress - Denied]: /images/posts/2019-07-04-vulnhub-mr_robot/Wordpress%20-%20Denied.png
-[Wordpress - 404]: /images/posts/2019-07-04-vulnhub-mr_robot/Wordpress%20-%20404%20Template.png
-[LinEnum]: https://github.com/rebootuser/LinEnum
+[Mr. Robot]:            /images/posts/2019-07-04-vulnhub-mr_robot/Mr.%20Robot.png
+[robots.txt]:           /images/posts/2019-07-04-vulnhub-mr_robot/Robots.png
+[Wordpress - Panel]:    /images/posts/2019-07-04-vulnhub-mr_robot/Wordpress%20-%20Panel.png
+[Wordpress - Users]:    /images/posts/2019-07-04-vulnhub-mr_robot/Wordpress%20-%20Users.png
+[PHP Reverse Shell]:    http://pentestmonkey.net/tools/web-shells/php-reverse-shell
+[pentestmonkey]:        http://pentestmonkey.net/
+[Wordpress - Denied]:   /images/posts/2019-07-04-vulnhub-mr_robot/Wordpress%20-%20Denied.png
+[Wordpress - 404]:      /images/posts/2019-07-04-vulnhub-mr_robot/Wordpress%20-%20404%20Template.png
+[LinEnum]:              https://github.com/rebootuser/LinEnum
