@@ -7,7 +7,7 @@ tags: [dc, local privilege escalation, rbash, wordpress]
 ---
 
 ## Information
-DC: 1 is the second box on the VulnHub series *DC* by [DCAU][DCAU]. It starts off with a simple Wordpress website and 
+DC: 2 is the second box on the VulnHub series *DC* by [DCAU][DCAU]. It starts off with a simple Wordpress website and 
 moves on to escaping `rbash` on a `SSH`. There are five flags available but flags 1 through 4 exist to give you hints 
 on what to do next to capture the next flag. As a result, this writeup will only talk about how to capture the root 
 flag only.
