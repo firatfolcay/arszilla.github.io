@@ -196,14 +196,13 @@ running `searchsploit PRTG` revealed several exploits; most notably an authentic
 ```
 $ searchsploit PRTG
 
-------------------------------------------------------------------------------- ----------------------------------------
-Exploit Title                                                                  |  Path
-                                                                               | (/usr/share/exploitdb/)
-------------------------------------------------------------------------------- ----------------------------------------
-PRTG Network Monitor 18.2.38 - (Authenticated) Remote Code Execution           | exploits/windows/webapps/46527.sh
-PRTG Network Monitor < 18.1.39.1648 - Stack Overflow (Denial of Service)       | exploits/windows_x86/dos/44500.py
-PRTG Traffic Grapher 6.2.1 - 'url' Cross-Site Scripting                        | exploits/java/webapps/34108.txt
-------------------------------------------------------------------------------- ----------------------------------------
+-------------------------------------------------------------------------------
+Exploit Title
+-------------------------------------------------------------------------------
+PRTG Network Monitor 18.2.38 - (Authenticated) Remote Code Execution
+PRTG Network Monitor < 18.1.39.1648 - Stack Overflow (Denial of Service)
+PRTG Traffic Grapher 6.2.1 - 'url' Cross-Site Scripting
+-------------------------------------------------------------------------------
 ```
 
 Taking a look at the actual code for the exploit over at [Github][Github] tells us that it works for `< 18.2.39`, while 
