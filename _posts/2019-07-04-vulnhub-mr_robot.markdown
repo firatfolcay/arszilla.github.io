@@ -18,7 +18,7 @@ vulnerabilities in the system.
 ## Summary
 - Use `nmap` to see the services
 - Use `gobuster` to find the hidden web directories and capture `key-1-of-3.txt`
-- Use `wpscan` to find possible vulnerabilities in the `Wordpress` installation and brute-force login
+- Use `wpscan` to find possible vulnerabilities in the Wordpress installation and brute-force login
 - Implement a reverse shell in one of the pages via `Editor` and use `nc` to catch the reverse shell
 - Crack the MD5 via `hashcat` and to spawn a shell with `python` to login as `robot` to capture `key-2-of-3.txt`
 - Find possible vulnerabilities in the shell via `LinEnum` to escalate privileges to `root` and capture`key-3-of-3.txt`
@@ -126,7 +126,7 @@ Gobuster v2.0.1              OJ Reeves (@TheColonial)
 =====================================================
 ```
 
-We now know that the website has `Wordpress` installed and there are several interesting directories. Taking a  look at 
+We now know that the website has Wordpress installed and there are several interesting directories. Taking a  look at 
 `/robots` displays a raw paste that reveals two other hidden directories.
 
 ![robots.txt][robots.txt]
@@ -141,17 +141,16 @@ Visiting `fsocity.dic` allows us to download a dictionary file that we'll probab
 lets us access our first key; `073403c8a58a1f80d943455fb30724b9`.
 
 ### Wordpress
-Since we know `Wordpress` is present on this machine, we'll try to access the admin console over at `/wp-admin`. Since 
+Since we know Wordpress is present on this machine, we'll try to access the admin console over at `/wp-admin`. Since 
 we don't know the name of the users on this machine, we'll use `Lost Your Password?` and try various usernames related 
 to the TV show to see if anything matches. `admin`,` fsociety`, `robot`, and `mrrobot` were no match but `elliot` was, 
 indicating `elliot` is a known user in the system. 
 
-Using `wpscan` we can scan the `Wordpress` installation and plugins for possible vulnerabilities and try to brute-force 
+Using `wpscan` we can scan the Wordpress installation and plugins for possible vulnerabilities and try to brute-force 
 login as `elliot`. Since we were given `fsocity.dic` earlier, it would make sense to use it as our wordlist.
 
 ```
 $ wpscan --url 192.168.2.243 --passwords fsocity.dic --usernames elliot
-
 _______________________________________________________________
         __          _______   _____
         \ \        / /  __ \ / ____|
@@ -167,46 +166,26 @@ _______________________________________________________________
 _______________________________________________________________
 
 [+] URL: http://192.168.2.243/
-[+] Started: Tue Jul  2 18:35:02 2019
 
 Interesting Finding(s):
 
 [+] http://192.168.2.243/
-| Interesting Entries:
-|  - Server: Apache
-|  - X-Mod-Pagespeed: 1.9.32.3-4523
-| Found By: Headers (Passive Detection)
-| Confidence: 100%
+[...]
 
 [+] http://192.168.2.243/robots.txt
-| Found By: Robots Txt (Aggressive Detection)
-| Confidence: 100%
+[...]
 
 [+] http://192.168.2.243/xmlrpc.php
-| Found By: Direct Access (Aggressive Detection)
-| Confidence: 100%
-| References:
-|  - http://codex.wordpress.org/XML-RPC_Pingback_API
-|  - https://www.rapid7.com/db/modules/auxiliary/scanner/http/wordpress_ghost_scanner
-|  - https://www.rapid7.com/db/modules/auxiliary/dos/http/wordpress_xmlrpc_dos
-|  - https://www.rapid7.com/db/modules/auxiliary/scanner/http/wordpress_xmlrpc_login
-|  - https://www.rapid7.com/db/modules/auxiliary/scanner/http/wordpress_pingback_access
+[...]
 
 [+] http://192.168.2.243/readme.html
-| Found By: Direct Access (Aggressive Detection)
-| Confidence: 100%
+[...]
 
 [+] http://192.168.2.243/wp-cron.php
-| Found By: Direct Access (Aggressive Detection)
-| Confidence: 60%
-| References:
-|  - https://www.iplocation.net/defend-wordpress-from-ddos
-|  - https://github.com/wpscanteam/wpscan/issues/1299
+[...]
 
 [+] WordPress version 4.3.19 identified (Latest, released on 2019-03-13).
-| Detected By: Rss Generator (Aggressive Detection)
-|  - http://192.168.2.243/feed/, <generator>https://wordpress.org/?v=4.3.19</generator>
-|  - http://192.168.2.243/comments/feed/, <generator>https://wordpress.org/?v=4.3.19</generator>
+[...]
 
 [i] The main theme could not be detected.
 
@@ -215,17 +194,16 @@ Interesting Finding(s):
 [i] No plugins Found.
 
 [+] Enumerating Config Backups (via Passive and Aggressive Methods)
-Checking Config Backups - Time: 00:00:00 <============================================================================================================> (21 / 21) 100.00% Time: 00:00:00
+Checking Config Backups - Time: 00:00:00 <========================================> (21 / 21) 100.00% Time: 00:00:00
 
 [i] No Config Backups Found.
 
 [+] Performing password attack on Xmlrpc Multicall against 1 user/s
-Progress Time: 00:57:11 <==========================================================================================================================> (1716 / 1716) 100.00% Time: 00:57:11
+Progress Time: 00:57:11 <========================================> (1716 / 1716) 100.00% Time: 00:57:11
 WARNING: Your progress bar is currently at 1716 out of 1716 and cannot be incremented. In v2.0.0 this will become a ProgressBar::InvalidProgressError.
-Progress Time: 00:57:12 <==========================================================================================================================> (1716 / 1716) 100.00% Time: 00:57:12
+Progress Time: 00:57:12 <========================================> (1716 / 1716) 100.00% Time: 00:57:12
 [SUCCESS] - elliot / ER28-0652                                                                                                                                                           
 All Found                                                                                                                                                                                
-
 
 [i] Valid Combinations Found:
 | Username: elliot, Password: ER28-0652
@@ -233,7 +211,7 @@ All Found
 [...]
 ```
 
-`wpscan` found `elliot`'s password to be `ER28-0652`. We can now access `Wordpress`.
+`wpscan` found `elliot`'s password to be `ER28-0652`. We can now access Wordpress.
 
 ![Wordpress - Panel][Wordpress - Panel]
 
