@@ -1,5 +1,6 @@
 ---
 ---
+
 @import "uno";
 @import "tables";
 @import "monokai";
@@ -20,6 +21,11 @@ pre.highlight code,
 .navigation__item a {
   margin: 5px 0;
   white-space: nowrap;
+}
+
+.post-meta__categories {
+  font-size: 12px;
+  padding: 0 5px;
 }
 
 .pagination__page-number {
@@ -46,7 +52,7 @@ pre.highlight code,
 }
 
 .footer__copyright {
-    margin: 0 20px 10px;
+  margin: 0 20px 10px;
 }
 
 .user-image {
@@ -55,5 +61,5 @@ pre.highlight code,
   width: 100px;
   height: 100px;
   border: 3px solid #fff;
-  border-radius:100%;
+  border-radius: 100%;
 }
