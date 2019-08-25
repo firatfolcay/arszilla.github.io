@@ -1,8 +1,9 @@
 # Site settings
-title:                    Arszilla's Blog
+title:                    Arszilla
 description:              "A mathematics undergraduate's adventures in cybersecurity."
 url:                      "http://arszilla.com/"
 baseurl:                  ""
+google_analytics:         "UA-144722505-1"
 
 author:
   name:                   "Arszilla"
