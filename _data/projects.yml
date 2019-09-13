@@ -1,0 +1,16 @@
+- year: 2019
+  projects:
+  - name: PyRecon
+    technologies: Python
+    description: A small program that searches for existence of a given username in various websites.
+    github: https://github.com/Arszilla/PyRecon
+
+  - name: PwnChrome
+    technologies: Python
+    description: A small program that grabs saved passwords from Chrome using a vulnerability where saved passwords are vulnerable to attacks/grabs when Chrome is closed.
+    github: https://github.com/Arszilla/PwnChrome
+
+  - name: BruteZIP
+    technologies: Python
+    description: A small program that unzips a password protected .zip by performing a brute-force attack using either a word list, password list or a dictionary.
+    github: https://github.com/Arszilla/BruteZIP

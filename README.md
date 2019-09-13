@@ -1,4 +1,4 @@
 # [arszilla.com][Arszilla]
-A mathematics undergraduate's adventures in cybersecurity.
+Mathematics undergrad doing pentesting & malware analysis.
 
 [Arszilla]: https://arszilla.com/

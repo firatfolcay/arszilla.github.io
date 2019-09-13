@@ -1,41 +1,45 @@
-# Site settings
-title:                    Arszilla
-description:              "A mathematics undergraduate's adventures in cybersecurity."
-url:                      "http://arszilla.com/"
-baseurl:                  ""
-google_analytics:         "UA-144722505-1"
+#
+###################################
+# Site wide configuration
+####################################
+#
+title: Arszilla
+email: arszilla@outlook.com
+description: Mathematics undergrad doing pentesting & malware analysis.
+url: https://www.arszilla.com
+baseurl: ""
+keywords: ["blog", "jekyll"]
 
-author:
-  name:                   "Arszilla"
-  email:                  arszilla@outlook.com
-  twitter_username:       arszilla
-  github_username:        arszilla
-  linkedin_username:      arslanmasood
-
-defaults:
-  -
-    scope:
-      path:               ""
-      type:               "posts"
-    values:
-        layout:           "post"
-
-# Build settings
-destination:              _site
-paginate:                 10
-permalink:                /:title/
-markdown:                 kramdown
-highlighter:              rouge
-
-sass:
-    sass_dir:             _sass
-    style:                compressed
+#
+###################################
+# Jekyll configuration
+####################################
+#
+timezone:          Turkey
+markdown:          kramdown
+highlighter:       rouge
+permalink:         /:title
 
 kramdown:
-  # use Github Flavored Markdown
-  input:                  GFM
-  # do not replace newlines by <br>s
-  hard_wrap:              false
+  auto_ids: true
+  footnote_nr: 1
+  entity_output: as_char
+  toc_levels: 1..6
+  enable_coderay: false
 
-plugins:                  ["jekyll-paginate"]
-exclude:                  ["README.md", "Gemfile", "Gemfile.lock",]
+#
+###################################
+# Site Owner configuration
+####################################
+#
+owner:
+  name: Arszilla
+  avatar: avatar.jpg
+  job: "Student"
+  bio: "Mathematics undergrad doing pentesting & malware analysis"
+  email: arszilla@outlook.com
+  twitter: Arszilla
+  google:
+    analytics: UA-147415223-1
+  github: Arszilla
+  linkedin: arslanmasood
