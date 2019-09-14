@@ -1,7 +1,7 @@
 ---
 title: "VulnHub | DC: 4 - Writeup"
 excerpt: Writeup for DC:4 of DC series from VulnHub
-date: 2019-09-12 00:00:00
+date: 2019-09-13 00:00:00
 categories: [VulnHub]
 ---
 
@@ -308,11 +308,11 @@ If you enjoyed this CTF, send me a tweet via @DCAU7.
 Thus, we’ve gained captured the root flag in DC: 4.
 
 [DCAU]:                 https://twitter.com/DCAU7
-[Login]:                /images/2019-09-12-vulnhub-dc_4/Login.png
-[Admin Panel - 1]:      /images/2019-09-12-vulnhub-dc_4/Admin%20Panel%20-%201.png
-[Admin Panel - 2]:      /images/2019-09-12-vulnhub-dc_4/Admin%20Panel%20-%202.png
-[Admin Panel - 3]:      /images/2019-09-12-vulnhub-dc_4/Admin%20Panel%20-%203.png
-[Burp Suite - 1]:       /images/2019-09-12-vulnhub-dc_4/Burp%20Suite%20-%201.png
-[Burp Suite - 2]:       /images/2019-09-12-vulnhub-dc_4/Burp%20Suite%20-%202.png
-[Burp Suite - 3]:       /images/2019-09-12-vulnhub-dc_4/Burp%20Suite%20-%203.png
+[Login]:                /images/2019-09-13-vulnhub-dc_4/Login.png
+[Admin Panel - 1]:      /images/2019-09-13-vulnhub-dc_4/Admin%20Panel%20-%201.png
+[Admin Panel - 2]:      /images/2019-09-13-vulnhub-dc_4/Admin%20Panel%20-%202.png
+[Admin Panel - 3]:      /images/2019-09-13-vulnhub-dc_4/Admin%20Panel%20-%203.png
+[Burp Suite - 1]:       /images/2019-09-13-vulnhub-dc_4/Burp%20Suite%20-%201.png
+[Burp Suite - 2]:       /images/2019-09-13-vulnhub-dc_4/Burp%20Suite%20-%202.png
+[Burp Suite - 3]:       /images/2019-09-13-vulnhub-dc_4/Burp%20Suite%20-%203.png
 [GTFOBin]:              https://gtfobins.github.io/gtfobins/tee/#sudo
